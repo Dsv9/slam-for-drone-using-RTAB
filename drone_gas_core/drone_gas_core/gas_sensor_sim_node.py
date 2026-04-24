@@ -8,7 +8,7 @@ from std_msgs.msg import Float32
 
 
 class GasSensorSimNode(Node):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("gas_sensor_sim_node")
         self.declare_parameter("pose_topic", "/rtabmap/localization_pose")
         self.declare_parameter("odom_topic", "/rtabmap/odom")
@@ -22,21 +22,27 @@ class GasSensorSimNode(Node):
         self.declare_parameter("sigma_xy", [1.2, 1.8])
         self.declare_parameter("sigma_z", [0.6, 0.7])
         self.pose = None
-        self.pub = self.create_publisher(Float32, self.get_parameter("gas_topic").value, 20)
-        self.create_subscription(PoseStamped, self.get_parameter("pose_topic").value, self.pose_cb, 20)
-        self.create_subscription(Odometry, self.get_parameter("odom_topic").value, self.odom_cb, 20)
+        self.pub = self.create_publisher(
+            Float32, self.get_parameter("gas_topic").value, 20
+        )
+        self.create_subscription(
+            PoseStamped, self.get_parameter("pose_topic").value, self.pose_cb, 20
+        )
+        self.create_subscription(
+            Odometry, self.get_parameter("odom_topic").value, self.odom_cb, 20
+        )
         hz = float(self.get_parameter("publish_hz").value)
         self.create_timer(1.0 / max(hz, 1e-3), self.tick)
 
-    def pose_cb(self, msg):
+    def pose_cb(self, msg: PoseStamped) -> None:
         p = msg.pose.position
         self.pose = (p.x, p.y, p.z)
 
-    def odom_cb(self, msg):
+    def odom_cb(self, msg: Odometry) -> None:
         p = msg.pose.pose.position
         self.pose = (p.x, p.y, p.z)
 
-    def tick(self):
+    def tick(self) -> None:
         if self.pose is None:
             return
         x, y, z = self.pose
@@ -49,12 +55,18 @@ class GasSensorSimNode(Node):
         c = float(self.get_parameter("background").value)
         for i in range(n):
             sx, sy = float(xy[2 * i]), float(xy[2 * i + 1])
-            c += float(ss[i]) * math.exp(-0.5 * (((x - sx) ** 2 + (y - sy) ** 2) / (float(sxy[i]) ** 2) + ((z - float(sz[i])) ** 2) / (float(szz[i]) ** 2)))
+            c += float(ss[i]) * math.exp(
+                -0.5
+                * (
+                    ((x - sx) ** 2 + (y - sy) ** 2) / (float(sxy[i]) ** 2)
+                    + ((z - float(sz[i])) ** 2) / (float(szz[i]) ** 2)
+                )
+            )
         c = max(0.0, c + random.gauss(0.0, float(self.get_parameter("noise_std").value)))
         self.pub.publish(Float32(data=c))
 
 
-def main():
+def main() -> None:
     rclpy.init()
     node = GasSensorSimNode()
     rclpy.spin(node)

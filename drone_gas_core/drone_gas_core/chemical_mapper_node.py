@@ -8,7 +8,7 @@ from std_msgs.msg import Float32
 
 
 class ChemicalMapperNode(Node):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("chemical_mapper_node")
         self.declare_parameter("pose_topic", "/rtabmap/localization_pose")
         self.declare_parameter("odom_topic", "/rtabmap/odom")
@@ -36,32 +36,41 @@ class ChemicalMapperNode(Node):
         self.grid = np.full((self.h, self.w), -1.0, dtype=np.float32)
         self.xy = None
         self.gas = None
-        self.pub = self.create_publisher(OccupancyGrid, self.get_parameter("map_topic").value, 10)
-        self.create_subscription(PoseStamped, self.get_parameter("pose_topic").value, self.pose_cb, 30)
-        self.create_subscription(Odometry, self.get_parameter("odom_topic").value, self.odom_cb, 30)
-        self.create_subscription(Float32, self.get_parameter("gas_topic").value, self.gas_cb, 30)
+        self.pub = self.create_publisher(
+            OccupancyGrid, self.get_parameter("map_topic").value, 10
+        )
+        self.create_subscription(
+            PoseStamped, self.get_parameter("pose_topic").value, self.pose_cb, 30
+        )
+        self.create_subscription(
+            Odometry, self.get_parameter("odom_topic").value, self.odom_cb, 30
+        )
+        self.create_subscription(
+            Float32, self.get_parameter("gas_topic").value, self.gas_cb, 30
+        )
         hz = float(self.get_parameter("publish_hz").value)
         self.create_timer(1.0 / max(hz, 1e-3), self.publish_map)
 
-    def pose_cb(self, msg):
+    def pose_cb(self, msg: PoseStamped) -> None:
         p = msg.pose.position
         self.xy = (p.x, p.y)
         self.update()
 
-    def odom_cb(self, msg):
+    def odom_cb(self, msg: Odometry) -> None:
         p = msg.pose.pose.position
         self.xy = (p.x, p.y)
         self.update()
 
-    def gas_cb(self, msg):
+    def gas_cb(self, msg: Float32) -> None:
         self.gas = float(msg.data)
         self.update()
 
-    def world_to_cell(self, x, y):
-        cx, cy = int(math.floor((x - self.ox) / self.res)), int(math.floor((y - self.oy) / self.res))
+    def world_to_cell(self, x: float, y: float):
+        cx = int(math.floor((x - self.ox) / self.res))
+        cy = int(math.floor((y - self.oy) / self.res))
         return (cx, cy) if 0 <= cx < self.w and 0 <= cy < self.h else None
 
-    def update(self):
+    def update(self) -> None:
         if self.xy is None or self.gas is None:
             return
         c = self.world_to_cell(self.xy[0], self.xy[1])
@@ -80,9 +89,11 @@ class ChemicalMapperNode(Node):
                     continue
                 val = g * math.exp(-0.5 * (d / max(self.splat_r * 0.5, 1e-3)) ** 2)
                 old = self.grid[ny, nx]
-                self.grid[ny, nx] = val if old < 0 else (1 - self.alpha) * old + self.alpha * val
+                self.grid[ny, nx] = (
+                    val if old < 0 else (1 - self.alpha) * old + self.alpha * val
+                )
 
-    def publish_map(self):
+    def publish_map(self) -> None:
         msg = OccupancyGrid()
         msg.header.stamp = self.get_clock().now().to_msg()
         msg.header.frame_id = self.map_frame
@@ -99,7 +110,7 @@ class ChemicalMapperNode(Node):
         self.pub.publish(msg)
 
 
-def main():
+def main() -> None:
     rclpy.init()
     node = ChemicalMapperNode()
     rclpy.spin(node)

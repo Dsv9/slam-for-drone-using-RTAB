@@ -7,7 +7,7 @@ from nav_msgs.msg import OccupancyGrid, Odometry
 
 
 class ExplorationControllerNode(Node):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("exploration_controller_node")
         self.declare_parameter("pose_topic", "/rtabmap/localization_pose")
         self.declare_parameter("odom_topic", "/rtabmap/odom")
@@ -23,25 +23,34 @@ class ExplorationControllerNode(Node):
         self.pose = None
         self.map_msg = None
         self.phase = 0.0
-        self.create_subscription(PoseStamped, self.get_parameter("pose_topic").value, self.pose_cb, 20)
-        self.create_subscription(Odometry, self.get_parameter("odom_topic").value, self.odom_cb, 20)
-        self.create_subscription(OccupancyGrid, self.get_parameter("chemical_map_topic").value, self.map_cb, 10)
+        self.create_subscription(
+            PoseStamped, self.get_parameter("pose_topic").value, self.pose_cb, 20
+        )
+        self.create_subscription(
+            Odometry, self.get_parameter("odom_topic").value, self.odom_cb, 20
+        )
+        self.create_subscription(
+            OccupancyGrid,
+            self.get_parameter("chemical_map_topic").value,
+            self.map_cb,
+            10,
+        )
         self.pub = self.create_publisher(Twist, self.get_parameter("cmd_vel_topic").value, 20)
         hz = float(self.get_parameter("control_hz").value)
         self.create_timer(1.0 / max(hz, 1e-3), self.tick)
 
-    def pose_cb(self, msg):
+    def pose_cb(self, msg: PoseStamped) -> None:
         p = msg.pose.position
         self.pose = (p.x, p.y, p.z)
 
-    def odom_cb(self, msg):
+    def odom_cb(self, msg: Odometry) -> None:
         p = msg.pose.pose.position
         self.pose = (p.x, p.y, p.z)
 
-    def map_cb(self, msg):
+    def map_cb(self, msg: OccupancyGrid) -> None:
         self.map_msg = msg
 
-    def grad(self, x, y):
+    def grad(self, x: float, y: float) -> np.ndarray:
         if self.map_msg is None:
             return np.array([0.0, 0.0], dtype=float)
         info = self.map_msg.info
@@ -52,12 +61,18 @@ class ExplorationControllerNode(Node):
         if cx < 1 or cy < 1 or cx >= w - 1 or cy >= h - 1:
             return np.array([0.0, 0.0], dtype=float)
         grid = np.array(self.map_msg.data, dtype=np.int16).reshape((h, w))
-        def v(ix, iy):
+        def v(ix: int, iy: int) -> float:
             a = grid[iy, ix]
             return 0.0 if a < 0 else float(a)
-        return np.array([(v(cx + 1, cy) - v(cx - 1, cy)) / (2 * res), (v(cx, cy + 1) - v(cx, cy - 1)) / (2 * res)], dtype=float)
+        return np.array(
+            [
+                (v(cx + 1, cy) - v(cx - 1, cy)) / (2 * res),
+                (v(cx, cy + 1) - v(cx, cy - 1)) / (2 * res),
+            ],
+            dtype=float,
+        )
 
-    def tick(self):
+    def tick(self) -> None:
         if self.pose is None:
             return
         x, y, z = self.pose
@@ -87,7 +102,7 @@ class ExplorationControllerNode(Node):
         self.pub.publish(cmd)
 
 
-def main():
+def main() -> None:
     rclpy.init()
     node = ExplorationControllerNode()
     rclpy.spin(node)

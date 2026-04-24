@@ -5,7 +5,7 @@ from nav_msgs.msg import Odometry
 
 
 class CmdVelWatchdogNode(Node):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("cmd_vel_watchdog_node")
         self.declare_parameter("input_cmd_vel_topic", "/drone/cmd_vel")
         self.declare_parameter("safe_cmd_vel_topic", "/drone/cmd_vel_safe")
@@ -18,27 +18,39 @@ class CmdVelWatchdogNode(Node):
         self.last_cmd = Twist()
         self.last_cmd_t = None
         self.last_odom_t = None
-        self.create_subscription(Twist, self.get_parameter("input_cmd_vel_topic").value, self.cmd_cb, 20)
-        self.create_subscription(Odometry, self.get_parameter("odom_topic").value, self.odom_cb, 20)
-        self.pub = self.create_publisher(Twist, self.get_parameter("safe_cmd_vel_topic").value, 20)
+        self.create_subscription(
+            Twist, self.get_parameter("input_cmd_vel_topic").value, self.cmd_cb, 20
+        )
+        self.create_subscription(
+            Odometry, self.get_parameter("odom_topic").value, self.odom_cb, 20
+        )
+        self.pub = self.create_publisher(
+            Twist, self.get_parameter("safe_cmd_vel_topic").value, 20
+        )
         hz = float(self.get_parameter("publish_hz").value)
         self.create_timer(1.0 / max(hz, 1e-3), self.tick)
 
-    def cmd_cb(self, msg):
+    def cmd_cb(self, msg: Twist) -> None:
         self.last_cmd = msg
         self.last_cmd_t = self.get_clock().now()
 
-    def odom_cb(self, _):
+    def odom_cb(self, _msg: Odometry) -> None:
         self.last_odom_t = self.get_clock().now()
 
-    def tick(self):
+    def tick(self) -> None:
         now = self.get_clock().now()
-        cmd_ok = self.last_cmd_t is not None and (now - self.last_cmd_t).nanoseconds * 1e-9 <= self.cmd_timeout
-        odom_ok = self.last_odom_t is not None and (now - self.last_odom_t).nanoseconds * 1e-9 <= self.odom_timeout
+        cmd_ok = (
+            self.last_cmd_t is not None
+            and (now - self.last_cmd_t).nanoseconds * 1e-9 <= self.cmd_timeout
+        )
+        odom_ok = (
+            self.last_odom_t is not None
+            and (now - self.last_odom_t).nanoseconds * 1e-9 <= self.odom_timeout
+        )
         self.pub.publish(self.last_cmd if cmd_ok and odom_ok else Twist())
 
 
-def main():
+def main() -> None:
     rclpy.init()
     node = CmdVelWatchdogNode()
     rclpy.spin(node)
