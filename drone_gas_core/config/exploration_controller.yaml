@@ -1,0 +1,13 @@
+exploration_controller_node:
+  ros__parameters:
+    pose_topic: /rtabmap/localization_pose
+    odom_topic: /rtabmap/odom
+    chemical_map_topic: /gas/chemical_map
+    cmd_vel_topic: /drone/cmd_vel
+    control_hz: 10.0
+    target_altitude: 1.5
+    base_speed: 0.25
+    seek_gain: 0.8
+    max_xy_speed: 0.6
+    max_z_speed: 0.4
+    yaw_rate: 0.0

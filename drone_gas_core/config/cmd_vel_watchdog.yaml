@@ -1,0 +1,8 @@
+cmd_vel_watchdog_node:
+  ros__parameters:
+    input_cmd_vel_topic: /drone/cmd_vel
+    safe_cmd_vel_topic: /drone/cmd_vel_safe
+    odom_topic: /rtabmap/odom
+    cmd_timeout_sec: 0.5
+    odom_timeout_sec: 1.0
+    publish_hz: 20.0

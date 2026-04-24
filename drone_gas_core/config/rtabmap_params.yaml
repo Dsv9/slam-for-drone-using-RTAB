@@ -1,0 +1,13 @@
+rtabmap:
+  ros__parameters:
+    use_sim_time: true
+    frame_id: base_link
+    subscribe_rgb: true
+    subscribe_depth: true
+    approx_sync: true
+    qos_image: 1
+    qos_camera_info: 1
+    RGBD/LinearUpdate: "0.02"
+    RGBD/AngularUpdate: "0.01"
+    Grid/FromDepth: "true"
+    Grid/3D: "false"

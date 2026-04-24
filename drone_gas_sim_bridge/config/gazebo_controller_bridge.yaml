@@ -1,0 +1,13 @@
+gazebo_controller_bridge_node:
+  ros__parameters:
+    input_cmd_vel_topic: /drone/cmd_vel
+    odom_topic: /rtabmap/odom
+    command_mode: velocity
+    gazebo_twist_topic: /cmd_vel
+    gazebo_pose_topic: /drone/target_pose
+    pose_frame_id: map
+    pose_step_dt: 0.1
+    publish_hz: 20.0
+    max_linear_xy: 1.0
+    max_linear_z: 0.8
+    max_angular_z: 1.2

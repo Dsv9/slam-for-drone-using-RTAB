@@ -1,0 +1,13 @@
+gas_sensor_sim_node:
+  ros__parameters:
+    pose_topic: /rtabmap/localization_pose
+    odom_topic: /rtabmap/odom
+    gas_topic: /gas/concentration
+    publish_hz: 10.0
+    noise_std: 0.01
+    background: 0.02
+    source_xy: [2.0, 2.0, -3.0, 1.0]
+    source_z: [1.2, 1.0]
+    source_strength: [1.0, 0.8]
+    sigma_xy: [1.2, 1.8]
+    sigma_z: [0.6, 0.7]

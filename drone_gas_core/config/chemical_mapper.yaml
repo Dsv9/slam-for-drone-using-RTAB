@@ -1,0 +1,16 @@
+chemical_mapper_node:
+  ros__parameters:
+    pose_topic: /rtabmap/localization_pose
+    odom_topic: /rtabmap/odom
+    gas_topic: /gas/concentration
+    map_topic: /gas/chemical_map
+    map_frame: map
+    resolution: 0.2
+    width: 200
+    height: 200
+    origin_x: -20.0
+    origin_y: -20.0
+    publish_hz: 2.0
+    splat_radius_m: 0.8
+    ema_alpha: 0.3
+    gas_max: 2.0

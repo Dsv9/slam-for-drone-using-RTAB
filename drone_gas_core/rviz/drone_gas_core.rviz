@@ -1,0 +1,24 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Class: rviz_default_plugins/Grid
+      Name: Grid
+      Enabled: true
+    - Class: rviz_default_plugins/TF
+      Name: TF
+      Enabled: true
+    - Class: rviz_default_plugins/Map
+      Name: GasMap
+      Enabled: true
+      Topic:
+        Value: /gas/chemical_map
+    - Class: rviz_default_plugins/Pose
+      Name: RTABPose
+      Enabled: true
+      Topic:
+        Value: /rtabmap/localization_pose
+  Global Options:
+    Fixed Frame: map
