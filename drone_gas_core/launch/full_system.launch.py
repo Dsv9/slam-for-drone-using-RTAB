@@ -9,7 +9,8 @@ import os
 
 
 def generate_launch_description():
-    pkg = get_package_share_directory("drone_gas_core")
+    pkg_core = get_package_share_directory("drone_gas_core")
+    pkg_sim_bridge = get_package_share_directory("drone_gas_sim_bridge")
     start_bridge = LaunchConfiguration("start_bridge")
     gazebo_twist_topic = LaunchConfiguration("gazebo_twist_topic")
     return LaunchDescription(
@@ -18,8 +19,40 @@ def generate_launch_description():
             DeclareLaunchArgument("gazebo_twist_topic", default_value="/cmd_vel"),
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(
-                    os.path.join(pkg, "launch", "rtabmap_rgbd.launch.py")
+                    os.path.join(
+                        pkg_sim_bridge, "launch", "spawn_simple_drone.launch.py"
+                    )
                 )
+            ),
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(
+                    os.path.join(pkg_core, "launch", "rtabmap_rgbd.launch.py")
+                ),
+                launch_arguments={
+                    "use_sim_time": "true",
+                    "rgb_topic": "/rgbd_camera/image",
+                    "depth_topic": "/rgbd_camera/depth_image",
+                    "camera_info_topic": "/rgbd_camera/camera_info",
+                }.items(),
+            ),
+            Node(
+                package="rviz2",
+                executable="rviz2",
+                name="rviz2",
+                output="screen",
+                arguments=[
+                    "-d",
+                    os.path.join(pkg_core, "rviz", "drone_gas_core.rviz"),
+                ],
+                parameters=[{"use_sim_time": True}],
+            ),
+            Node(
+                package="tf2_ros",
+                executable="static_transform_publisher",
+                name="rgbd_camera_static_tf",
+                output="screen",
+                arguments=["0.18", "0", "0", "0", "0", "0", "base_link", "rgbd_camera"],
+                parameters=[{"use_sim_time": True}],
             ),
             Node(
                 package="drone_gas_core",
@@ -27,7 +60,7 @@ def generate_launch_description():
                 name="gas_sensor_sim_node",
                 output="screen",
                 parameters=[
-                    os.path.join(pkg, "config", "gas_sensor_sim.yaml"),
+                    os.path.join(pkg_core, "config", "gas_sensor_sim.yaml"),
                     {"use_sim_time": True},
                 ],
             ),
@@ -37,7 +70,7 @@ def generate_launch_description():
                 name="chemical_mapper_node",
                 output="screen",
                 parameters=[
-                    os.path.join(pkg, "config", "chemical_mapper.yaml"),
+                    os.path.join(pkg_core, "config", "chemical_mapper.yaml"),
                     {"use_sim_time": True},
                 ],
             ),
@@ -47,7 +80,7 @@ def generate_launch_description():
                 name="exploration_controller_node",
                 output="screen",
                 parameters=[
-                    os.path.join(pkg, "config", "exploration_controller.yaml"),
+                    os.path.join(pkg_core, "config", "exploration_controller.yaml"),
                     {"use_sim_time": True},
                 ],
             ),
@@ -57,7 +90,7 @@ def generate_launch_description():
                 name="cmd_vel_watchdog_node",
                 output="screen",
                 parameters=[
-                    os.path.join(pkg, "config", "cmd_vel_watchdog.yaml"),
+                    os.path.join(pkg_core, "config", "cmd_vel_watchdog.yaml"),
                     {"use_sim_time": True},
                 ],
             ),
