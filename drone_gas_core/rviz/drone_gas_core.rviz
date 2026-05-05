@@ -20,5 +20,35 @@ Visualization Manager:
       Enabled: true
       Topic:
         Value: /rtabmap/localization_pose
+    - Class: rviz_default_plugins/PointCloud2
+      Name: RGBDPoints
+      Enabled: true
+      Topic:
+        Value: /rgbd_camera/points
+    - Class: rviz_default_plugins/Image
+      Name: RGBImage
+      Enabled: true
+      Topic:
+        Value: /rgbd_camera/image
+    - Class: rviz_default_plugins/Image
+      Name: DepthImage
+      Enabled: true
+      Topic:
+        Value: /rgbd_camera/depth_image
+    - Class: rviz_default_plugins/Odometry
+      Name: RTABOdometry
+      Enabled: true
+      Topic:
+        Value: /rtabmap/odom
+    - Class: rviz_default_plugins/Map
+      Name: RTABMap
+      Enabled: true
+      Topic:
+        Value: /map
+    - Class: rviz_default_plugins/Path
+      Name: PlannedPath
+      Enabled: true
+      Topic:
+        Value: /path
   Global Options:
-    Fixed Frame: map
+    Fixed Frame: odom

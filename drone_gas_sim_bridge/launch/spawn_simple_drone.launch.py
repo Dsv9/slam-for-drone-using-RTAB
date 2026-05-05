@@ -32,11 +32,11 @@ def generate_launch_description():
         executable="parameter_bridge",
         arguments=[
             "/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock",
-            "/cmd_vel@geometry_msgs/msg/Twist@gz.msgs.Twist",
-            "/rgbd_camera/image@sensor_msgs/msg/Image@gz.msgs.Image",
-            "/rgbd_camera/depth_image@sensor_msgs/msg/Image@gz.msgs.Image",
-            "/rgbd_camera/camera_info@sensor_msgs/msg/CameraInfo@gz.msgs.CameraInfo",
-            "/rgbd_camera/points@sensor_msgs/msg/PointCloud2@gz.msgs.PointCloudPacked",
+            "/cmd_vel@geometry_msgs/msg/Twist]gz.msgs.Twist",
+            "/rgbd_camera/image@sensor_msgs/msg/Image[gz.msgs.Image",
+            "/rgbd_camera/depth_image@sensor_msgs/msg/Image[gz.msgs.Image",
+            "/rgbd_camera/camera_info@sensor_msgs/msg/CameraInfo[gz.msgs.CameraInfo",
+            "/rgbd_camera/points@sensor_msgs/msg/PointCloud2[gz.msgs.PointCloudPacked",
         ],
         output="screen",
     )
