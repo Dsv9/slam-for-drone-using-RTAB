@@ -58,102 +58,114 @@
       </link>
     </model>
 
-    <model name="feature_box_1">
+    <model name="room_wall_north">
       <static>true</static>
-      <pose>2.0 1.5 0.5 0 0 0</pose>
+      <pose>0 5.0 1.25 0 0 0</pose>
       <link name="link">
         <collision name="collision">
-          <geometry>
-            <box>
-              <size>1.0 1.0 1.0</size>
-            </box>
-          </geometry>
+          <geometry><box><size>10.0 0.25 2.5</size></box></geometry>
         </collision>
         <visual name="visual">
-          <geometry>
-            <box>
-              <size>1.0 1.0 1.0</size>
-            </box>
-          </geometry>
-          <material>
-            <ambient>0.8 0.2 0.2 1</ambient>
-            <diffuse>0.8 0.2 0.2 1</diffuse>
-          </material>
+          <geometry><box><size>10.0 0.25 2.5</size></box></geometry>
+          <material><ambient>0.65 0.65 0.72 1</ambient><diffuse>0.65 0.65 0.72 1</diffuse></material>
         </visual>
       </link>
     </model>
 
-    <model name="feature_box_2">
+    <model name="room_wall_south">
       <static>true</static>
-      <pose>-2.5 -1.8 0.75 0 0 0.3</pose>
+      <pose>0 -5.0 1.25 0 0 0</pose>
       <link name="link">
         <collision name="collision">
-          <geometry>
-            <box>
-              <size>0.8 1.2 1.5</size>
-            </box>
-          </geometry>
+          <geometry><box><size>10.0 0.25 2.5</size></box></geometry>
         </collision>
         <visual name="visual">
-          <geometry>
-            <box>
-              <size>0.8 1.2 1.5</size>
-            </box>
-          </geometry>
-          <material>
-            <ambient>0.2 0.7 0.2 1</ambient>
-            <diffuse>0.2 0.7 0.2 1</diffuse>
-          </material>
+          <geometry><box><size>10.0 0.25 2.5</size></box></geometry>
+          <material><ambient>0.62 0.62 0.68 1</ambient><diffuse>0.62 0.62 0.68 1</diffuse></material>
         </visual>
       </link>
     </model>
 
-    <model name="feature_wall_1">
+    <model name="room_wall_east">
       <static>true</static>
-      <pose>0 4.5 1.0 0 0 0</pose>
+      <pose>5.0 0 1.25 0 0 0</pose>
       <link name="link">
         <collision name="collision">
-          <geometry>
-            <box>
-              <size>8.0 0.2 2.0</size>
-            </box>
-          </geometry>
+          <geometry><box><size>0.25 10.0 2.5</size></box></geometry>
         </collision>
         <visual name="visual">
-          <geometry>
-            <box>
-              <size>8.0 0.2 2.0</size>
-            </box>
-          </geometry>
-          <material>
-            <ambient>0.2 0.2 0.8 1</ambient>
-            <diffuse>0.2 0.2 0.8 1</diffuse>
-          </material>
+          <geometry><box><size>0.25 10.0 2.5</size></box></geometry>
+          <material><ambient>0.66 0.61 0.61 1</ambient><diffuse>0.66 0.61 0.61 1</diffuse></material>
         </visual>
       </link>
     </model>
 
-    <model name="feature_wall_2">
+    <model name="room_wall_west">
       <static>true</static>
-      <pose>-4.5 0 1.0 0 0 1.57</pose>
+      <pose>-5.0 0 1.25 0 0 0</pose>
       <link name="link">
         <collision name="collision">
-          <geometry>
-            <box>
-              <size>8.0 0.2 2.0</size>
-            </box>
-          </geometry>
+          <geometry><box><size>0.25 10.0 2.5</size></box></geometry>
         </collision>
         <visual name="visual">
-          <geometry>
-            <box>
-              <size>8.0 0.2 2.0</size>
-            </box>
-          </geometry>
-          <material>
-            <ambient>0.8 0.8 0.2 1</ambient>
-            <diffuse>0.8 0.8 0.2 1</diffuse>
-          </material>
+          <geometry><box><size>0.25 10.0 2.5</size></box></geometry>
+          <material><ambient>0.66 0.61 0.61 1</ambient><diffuse>0.66 0.61 0.61 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="center_box_feature">
+      <static>true</static>
+      <pose>1.6 0.8 0.55 0 0 0.3</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>1.2 0.8 1.1</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>1.2 0.8 1.1</size></box></geometry>
+          <material><ambient>0.85 0.30 0.25 1</ambient><diffuse>0.85 0.30 0.25 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="short_wall_feature">
+      <static>true</static>
+      <pose>-1.2 -0.4 0.7 0 0 1.15</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>2.4 0.25 1.4</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>2.4 0.25 1.4</size></box></geometry>
+          <material><ambient>0.25 0.40 0.82 1</ambient><diffuse>0.25 0.40 0.82 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="pillar_feature_1">
+      <static>true</static>
+      <pose>-2.6 2.2 0.9 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><cylinder><radius>0.30</radius><length>1.8</length></cylinder></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><cylinder><radius>0.30</radius><length>1.8</length></cylinder></geometry>
+          <material><ambient>0.25 0.75 0.35 1</ambient><diffuse>0.25 0.75 0.35 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="pillar_feature_2">
+      <static>true</static>
+      <pose>2.6 -2.1 0.9 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><cylinder><radius>0.25</radius><length>1.8</length></cylinder></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><cylinder><radius>0.25</radius><length>1.8</length></cylinder></geometry>
+          <material><ambient>0.85 0.72 0.24 1</ambient><diffuse>0.85 0.72 0.24 1</diffuse></material>
         </visual>
       </link>
     </model>

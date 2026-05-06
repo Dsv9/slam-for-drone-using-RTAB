@@ -12,10 +12,10 @@ def generate_launch_description():
     return LaunchDescription(
         [
             DeclareLaunchArgument("use_sim_time", default_value="true"),
-            DeclareLaunchArgument("rgb_topic", default_value="/camera/color/image_raw"),
-            DeclareLaunchArgument("depth_topic", default_value="/camera/depth/image_raw"),
+            DeclareLaunchArgument("rgb_topic", default_value="/rgbd_camera/image"),
+            DeclareLaunchArgument("depth_topic", default_value="/rgbd_camera/depth_image"),
             DeclareLaunchArgument(
-                "camera_info_topic", default_value="/camera/color/camera_info"
+                "camera_info_topic", default_value="/rgbd_camera/camera_info"
             ),
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(
@@ -27,6 +27,8 @@ def generate_launch_description():
                     "subscribe_rgb": "true",
                     "subscribe_depth": "true",
                     "approx_sync": "true",
+                    "queue_size": "40",
+                    "sync_queue_size": "40",
                     "rgb_topic": LaunchConfiguration("rgb_topic"),
                     "depth_topic": LaunchConfiguration("depth_topic"),
                     "camera_info_topic": LaunchConfiguration("camera_info_topic"),

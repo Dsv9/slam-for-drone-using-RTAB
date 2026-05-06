@@ -42,7 +42,7 @@ Visualization Manager:
         Value: /rtabmap/odom
     - Class: rviz_default_plugins/Map
       Name: RTABMap
-      Enabled: true
+      Enabled: false
       Topic:
         Value: /map
     - Class: rviz_default_plugins/Path
@@ -51,4 +51,4 @@ Visualization Manager:
       Topic:
         Value: /path
   Global Options:
-    Fixed Frame: odom
+    Fixed Frame: base_link

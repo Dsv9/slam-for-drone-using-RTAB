@@ -15,6 +15,15 @@ def generate_launch_description():
     gazebo_twist_topic = LaunchConfiguration("gazebo_twist_topic")
     return LaunchDescription(
         [
+            # Frame chain for simulation SLAM:
+            #   odom -> base_link -> rgbd_camera
+            # Gazebo camera message headers are currently using:
+            #   simple_drone/base_link/rgbd_camera
+            # We publish a static alias tf to that exact frame so RTAB-Map and RViz
+            # can transform camera data consistently without changing topic names.
+            #
+            # RViz fixed frame should start as base_link or odom while map is not yet
+            # being published/initialized. Using map too early causes filter drops.
             DeclareLaunchArgument("start_bridge", default_value="true"),
             DeclareLaunchArgument("gazebo_twist_topic", default_value="/cmd_vel"),
             IncludeLaunchDescription(
@@ -52,6 +61,23 @@ def generate_launch_description():
                 name="rgbd_camera_static_tf",
                 output="screen",
                 arguments=["0.18", "0", "0", "0", "0", "0", "base_link", "rgbd_camera"],
+                parameters=[{"use_sim_time": True}],
+            ),
+            Node(
+                package="tf2_ros",
+                executable="static_transform_publisher",
+                name="rgbd_camera_gazebo_frame_alias_tf",
+                output="screen",
+                arguments=[
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "rgbd_camera",
+                    "simple_drone/base_link/rgbd_camera",
+                ],
                 parameters=[{"use_sim_time": True}],
             ),
             Node(
