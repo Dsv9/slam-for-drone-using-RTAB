@@ -27,18 +27,12 @@ def generate_launch_description():
         output="screen",
     )
 
+    bridge_config = os.path.join(pkg_share, "config", "gz_ros_bridge.yaml")
     bridge = Node(
         package="ros_gz_bridge",
         executable="parameter_bridge",
-        arguments=[
-            "/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock",
-            "/cmd_vel@geometry_msgs/msg/Twist]gz.msgs.Twist",
-            "/rgbd_camera/image@sensor_msgs/msg/Image[gz.msgs.Image",
-            "/rgbd_camera/depth_image@sensor_msgs/msg/Image[gz.msgs.Image",
-            "/rgbd_camera/camera_info@sensor_msgs/msg/CameraInfo[gz.msgs.CameraInfo",
-            "/rgbd_camera/points@sensor_msgs/msg/PointCloud2[gz.msgs.PointCloudPacked",
-        ],
         output="screen",
+        arguments=["--ros-args", "-p", f"config_file:={bridge_config}"],
     )
 
     return LaunchDescription([gazebo, spawn_drone, bridge])

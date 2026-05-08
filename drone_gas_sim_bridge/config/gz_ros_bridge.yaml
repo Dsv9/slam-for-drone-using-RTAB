@@ -1,0 +1,40 @@
+# Bridge Gazebo Harmonic transport to fixed ROS topic names for RTAB-Map.
+# model.sdf uses <topic>/rgbd_camera</topic> so Gazebo publishes siblings:
+#   /rgbd_camera/image, /rgbd_camera/depth_image, /rgbd_camera/points, /rgbd_camera/camera_info
+# (Using /rgbd_camera/image as the sensor <topic> nested depth/points under /rgbd_camera/image/...,
+# so /rgbd_camera/depth_image never appeared on GZ transport and the bridge had nothing to forward.)
+
+- topic_name: /clock
+  ros_type_name: rosgraph_msgs/msg/Clock
+  gz_type_name: gz.msgs.Clock
+  direction: GZ_TO_ROS
+  qos_profile: CLOCK
+
+- topic_name: /cmd_vel
+  ros_type_name: geometry_msgs/msg/Twist
+  gz_type_name: gz.msgs.Twist
+  direction: ROS_TO_GZ
+
+- topic_name: /rgbd_camera/image
+  ros_type_name: sensor_msgs/msg/Image
+  gz_type_name: gz.msgs.Image
+  direction: GZ_TO_ROS
+  qos_profile: SENSOR_DATA
+
+- topic_name: /rgbd_camera/camera_info
+  ros_type_name: sensor_msgs/msg/CameraInfo
+  gz_type_name: gz.msgs.CameraInfo
+  direction: GZ_TO_ROS
+  qos_profile: SENSOR_DATA
+
+- topic_name: /rgbd_camera/depth_image
+  ros_type_name: sensor_msgs/msg/Image
+  gz_type_name: gz.msgs.Image
+  direction: GZ_TO_ROS
+  qos_profile: SENSOR_DATA
+
+- topic_name: /rgbd_camera/points
+  ros_type_name: sensor_msgs/msg/PointCloud2
+  gz_type_name: gz.msgs.PointCloudPacked
+  direction: GZ_TO_ROS
+  qos_profile: SENSOR_DATA
