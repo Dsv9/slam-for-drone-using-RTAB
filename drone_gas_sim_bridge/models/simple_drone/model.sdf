@@ -39,12 +39,26 @@
         </material>
       </visual>
 
-      <!-- Base topic /rgbd_camera: Gazebo Harmonic publishes siblings
-           /rgbd_camera/image, /rgbd_camera/depth_image, /rgbd_camera/points,
-           /rgbd_camera/camera_info. Using /rgbd_camera/image as the base
-           nested depth/points under /rgbd_camera/image/... so the bridge
-           never saw /rgbd_camera/depth_image on the wire. -->
-      <sensor name="rgbd_camera" type="depth_camera">
+      <!--
+        Use type="rgbd_camera" (RgbdCameraSensor in gz-sensors), not depth_camera.
+
+        depth_camera (DepthCameraSensor) publishes:
+          - float depth image on the bare <topic> name (e.g. /rgbd_camera), not .../depth_image
+          - point cloud on <topic>/points
+
+        That layout does not match ROS / RTAB, which expect siblings:
+          /rgbd_camera/image, /rgbd_camera/depth_image, /rgbd_camera/camera_info, /rgbd_camera/points
+
+        rgbd_camera with <topic>/rgbd_camera</topic> makes Gazebo Harmonic advertise:
+          - /rgbd_camera/image          (color)
+          - /rgbd_camera/depth_image    (R_FLOAT32 depth; needs a subscriber to render)
+          - /rgbd_camera/camera_info
+          - /rgbd_camera/points         (PointCloudPacked; needs a subscriber to render)
+
+        SDF does not use <depth_image_topic> / <point_cloud_topic> for these sensors; topic
+        names are fixed by the sensor implementation as above.
+      -->
+      <sensor name="rgbd_camera" type="rgbd_camera">
         <pose>0.18 0 0 0 0 0</pose>
         <always_on>true</always_on>
         <update_rate>20</update_rate>

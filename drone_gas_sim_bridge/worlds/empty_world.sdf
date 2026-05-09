@@ -1,4 +1,5 @@
 <?xml version="1.0"?>
+<!-- Lightweight indoor scene: perimeter + ceiling + internal clutter for RGB VO / RGB-D SLAM. -->
 <sdf version="1.9">
   <world name="default">
     <gravity>0 0 -9.8</gravity>
@@ -224,6 +225,134 @@
         <visual name="visual">
           <geometry><box><size>0.22 6.0 1.8</size></box></geometry>
           <material><ambient>0.70 0.68 0.55 1</ambient><diffuse>0.70 0.68 0.55 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Corridor-style partition with offset opening (navigation + richer wall texture). -->
+    <model name="partition_corridor_ns">
+      <static>true</static>
+      <pose>-3.2 5.6 1.05 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>9.6 0.24 2.1</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>9.6 0.24 2.1</size></box></geometry>
+          <material><ambient>0.72 0.62 0.48 1</ambient><diffuse>0.72 0.62 0.48 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="partition_office_WE">
+      <static>true</static>
+      <pose>5.2 -1.0 1.1 0 0 1.571</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>7.8 0.22 2.15</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>7.8 0.22 2.15</size></box></geometry>
+          <material><ambient>0.52 0.58 0.72 1</ambient><diffuse>0.52 0.58 0.72 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="corner_nook_wall">
+      <static>true</static>
+      <pose>-6.0 -6.5 1.0 0 0 0.75</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>5.8 0.20 2.05</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>5.8 0.20 2.05</size></box></geometry>
+          <material><ambient>0.82 0.78 0.42 1</ambient><diffuse>0.82 0.78 0.42 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Narrow wall ridges (high-contrast silhouettes when moving). -->
+    <model name="wall_ridge_a">
+      <static>true</static>
+      <pose>7.65 3.0 1.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>0.12 2.2 1.6</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.12 2.2 1.6</size></box></geometry>
+          <material><ambient>0.15 0.15 0.18 1</ambient><diffuse>0.15 0.15 0.18 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="wall_ridge_b">
+      <static>true</static>
+      <pose>-7.68 -2.4 1.45 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>0.12 1.8 1.9</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.12 1.8 1.9</size></box></geometry>
+          <material><ambient>0.88 0.35 0.22 1</ambient><diffuse>0.88 0.35 0.22 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="tall_pillar_c">
+      <static>true</static>
+      <pose>1.2 -5.5 1.25 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><cylinder><radius>0.22</radius><length>2.5</length></cylinder></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><cylinder><radius>0.22</radius><length>2.5</length></cylinder></geometry>
+          <material><ambient>0.35 0.35 0.82 1</ambient><diffuse>0.35 0.35 0.82 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="low_platform">
+      <static>true</static>
+      <pose>-1.8 4.0 0.25 0 0 -0.4</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>2.4 1.5 0.5</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>2.4 1.5 0.5</size></box></geometry>
+          <material><ambient>0.45 0.42 0.38 1</ambient><diffuse>0.45 0.42 0.38 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="stack_boxes_1">
+      <static>true</static>
+      <pose>6.5 5.0 0.5 0 0 0.9</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>1.15 1.15 1.0</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>1.15 1.15 1.0</size></box></geometry>
+          <material><ambient>0.75 0.55 0.18 1</ambient><diffuse>0.75 0.55 0.18 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="stack_boxes_2">
+      <static>true</static>
+      <pose>-4.8 6.8 0.55 0 0 -0.35</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>0.85 0.85 1.1</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.85 0.85 1.1</size></box></geometry>
+          <material><ambient>0.22 0.62 0.48 1</ambient><diffuse>0.22 0.62 0.48 1</diffuse></material>
         </visual>
       </link>
     </model>

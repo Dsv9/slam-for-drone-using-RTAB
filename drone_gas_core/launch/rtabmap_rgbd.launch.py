@@ -27,7 +27,10 @@ def generate_launch_description():
                     "subscribe_rgb": "true",
                     "subscribe_depth": "true",
                     "approx_sync": "true",
+                    # queue_size only sets deprecated sync fallback; upstream defaults
+                    # topic_queue_size=10 unless set explicitly — that matches the "(current=10)" warning.
                     "queue_size": "40",
+                    "topic_queue_size": "40",
                     "sync_queue_size": "40",
                     "rgb_topic": LaunchConfiguration("rgb_topic"),
                     "depth_topic": LaunchConfiguration("depth_topic"),

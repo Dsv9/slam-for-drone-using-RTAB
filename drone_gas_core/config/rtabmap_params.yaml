@@ -5,11 +5,14 @@ rtabmap:
     subscribe_rgb: true
     subscribe_depth: true
     approx_sync: true
-    queue_size: 40
+    # Per-node names rtabmap_sync reads (avoid leaving topic_queue_size at default 10).
+    topic_queue_size: 40
     sync_queue_size: 40
     approx_sync_max_interval: 0.08
-    qos_image: 1
-    qos_camera_info: 1
+    # ros_gz_bridge uses sensor_data QoS → best effort. RELIABLE (1) often sees no callbacks.
+    # RMW_QOS_POLICY_RELIABILITY_BEST_EFFORT = 2
+    qos_image: 2
+    qos_camera_info: 2
     RGBD/LinearUpdate: "0.02"
     RGBD/AngularUpdate: "0.01"
     Grid/FromDepth: "true"
@@ -22,8 +25,8 @@ rgbd_odometry:
     subscribe_rgb: true
     subscribe_depth: true
     approx_sync: true
-    queue_size: 40
+    topic_queue_size: 40
     sync_queue_size: 40
     approx_sync_max_interval: 0.08
-    qos_image: 1
-    qos_camera_info: 1
+    qos_image: 2
+    qos_camera_info: 2
