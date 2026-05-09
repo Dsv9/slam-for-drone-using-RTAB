@@ -6,6 +6,9 @@
 #
 # Explicit ros_topic_name + gz_topic_name avoids ambiguity if your shell or tools
 # add/strip slashes; both sides use absolute-style names starting with '/'.
+#
+# frame_id override: Gazebo often puts a long scoped name in Image/Cloud headers.
+# Align ROS headers with TF (base_link -> rgbd_camera) so RViz stops flagging red.
 
 - topic_name: /clock
   ros_type_name: rosgraph_msgs/msg/Clock
@@ -24,6 +27,7 @@
   gz_type_name: gz.msgs.Image
   direction: GZ_TO_ROS
   qos_profile: SENSOR_DATA
+  frame_id: rgbd_camera
 
 - ros_topic_name: /rgbd_camera/camera_info
   gz_topic_name: /rgbd_camera/camera_info
@@ -31,6 +35,7 @@
   gz_type_name: gz.msgs.CameraInfo
   direction: GZ_TO_ROS
   qos_profile: SENSOR_DATA
+  frame_id: rgbd_camera
 
 - ros_topic_name: /rgbd_camera/depth_image
   gz_topic_name: /rgbd_camera/depth_image
@@ -38,6 +43,7 @@
   gz_type_name: gz.msgs.Image
   direction: GZ_TO_ROS
   qos_profile: SENSOR_DATA
+  frame_id: rgbd_camera
 
 # Native RgbdCameraSensor point cloud publisher: /rgbd_camera/points
 - ros_topic_name: /rgbd_camera/points
@@ -46,3 +52,4 @@
   gz_type_name: gz.msgs.PointCloudPacked
   direction: GZ_TO_ROS
   qos_profile: SENSOR_DATA
+  frame_id: rgbd_camera

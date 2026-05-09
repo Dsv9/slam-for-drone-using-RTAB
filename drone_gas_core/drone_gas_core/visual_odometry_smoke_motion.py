@@ -4,18 +4,18 @@ Publishes repeatedly to /drone/cmd_vel while the stack is running full_system (w
 expects fresh commands at least every cmd_timeout_sec).
 
 Parameters (ROS 2 -p overrides):
-  linear_x (float, default 0.12): forward body +X velocity (m/s)
-  yaw_z (float, default 0): body yaw rate (rad/s)
-  duration_sec (float, default 5): motion phase length
-  rate_hz (float, default 10): publish rate during motion
+  linear_x (float, default 0.05): very slow forward for VO tracking (m/s)
+  yaw_z (float, default 0): body yaw rate (rad/s) — keep 0 until VO locks
+  duration_sec (float, default 8): motion phase length
+  rate_hz (float, default 8): publish rate during motion
 
 Examples:
   ros2 run drone_gas_core visual_odometry_smoke_motion
-  ros2 run drone_gas_core visual_odometry_smoke_motion --ros-args -p linear_x:=0.1 -p duration_sec:=4.0
+  ros2 run drone_gas_core visual_odometry_smoke_motion --ros-args -p linear_x:=0.04 -p duration_sec:=12.0
 
 One-liner (no extra script):
-  ros2 topic pub --rate 10 /drone/cmd_vel geometry_msgs/msg/Twist \\
-    '{linear: {x: 0.12}, angular: {z: 0.0}}' --times 40
+  ros2 topic pub --rate 8 /drone/cmd_vel geometry_msgs/msg/Twist \\
+    '{linear: {x: 0.05}, angular: {z: 0.0}}' --times 64
 """
 from __future__ import annotations
 
@@ -29,10 +29,10 @@ from rclpy.node import Node
 def main() -> None:
     rclpy.init()
     node = Node("visual_odometry_smoke_motion_once")
-    node.declare_parameter("linear_x", 0.12)
+    node.declare_parameter("linear_x", 0.05)
     node.declare_parameter("yaw_z", 0.0)
-    node.declare_parameter("duration_sec", 5.0)
-    node.declare_parameter("rate_hz", 10.0)
+    node.declare_parameter("duration_sec", 8.0)
+    node.declare_parameter("rate_hz", 8.0)
 
     lx = float(node.get_parameter("linear_x").value)
     wz = float(node.get_parameter("yaw_z").value)

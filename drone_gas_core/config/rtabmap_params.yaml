@@ -8,7 +8,7 @@ rtabmap:
     # Per-node names rtabmap_sync reads (avoid leaving topic_queue_size at default 10).
     topic_queue_size: 40
     sync_queue_size: 40
-    approx_sync_max_interval: 0.12
+    approx_sync_max_interval: 0.2
     # ros_gz_bridge uses sensor_data QoS → best effort. RELIABLE (1) often sees no callbacks.
     # RMW_QOS_POLICY_RELIABILITY_BEST_EFFORT = 2
     qos_image: 2
@@ -27,9 +27,13 @@ rgbd_odometry:
     approx_sync: true
     topic_queue_size: 40
     sync_queue_size: 40
-    approx_sync_max_interval: 0.12
+    approx_sync_max_interval: 0.2
     qos_image: 2
     qos_camera_info: 2
-    # Visual odometry / ORB tuning for Gazebo (more features, slightly relaxed matching).
-    Vis/MaxFeatures: "2500"
-    Vis/InlierDistance: "0.04"
+    # Gazebo sim: weak textures — more ORB features, fewer inliers required, 3DoF motion.
+    Vis/MaxFeatures: "4000"
+    Vis/MinInliers: "8"
+    Vis/InlierDistance: "0.06"
+    GFTT/MinDistance: "3"
+    Reg/Force3DoF: "true"
+    Odom/ImageDecimation: "1"

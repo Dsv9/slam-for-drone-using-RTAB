@@ -61,7 +61,17 @@ def generate_launch_description():
                 name="rgbd_camera_static_tf",
                 output="screen",
                 # Must match RGBD sensor pose in drone_gas_sim_bridge/models/simple_drone/model.sdf
-                arguments=["0.30", "0", "0.055", "0", "0", "0", "base_link", "rgbd_camera"],
+                # Match model.sdf camera pose: x y z yaw pitch roll (see Gazebo sdf rpy).
+                arguments=[
+                    "0.30",
+                    "0",
+                    "0.055",
+                    "0",
+                    "-0.14",
+                    "0",
+                    "base_link",
+                    "rgbd_camera",
+                ],
                 parameters=[{"use_sim_time": True}],
             ),
             Node(

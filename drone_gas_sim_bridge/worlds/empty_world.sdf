@@ -196,38 +196,49 @@
         </visual>
       </link>
     </model>
+    <!-- Was at x=-0.5 across the room: blocked +X from common spawn positions. -->
     <model name="partition_short">
       <static>true</static>
-      <pose>-0.5 0 1.0 0 0 0</pose>
+      <pose>-5.15 0 1.0 0 0 0</pose>
       <link name="link">
-        <collision name="c"><geometry><box><size>0.22 5.5 2.0</size></box></geometry></collision>
+        <collision name="c"><geometry><box><size>0.22 2.2 2.0</size></box></geometry></collision>
         <visual name="v">
-          <geometry><box><size>0.22 5.5 2.0</size></box></geometry>
+          <geometry><box><size>0.22 2.2 2.0</size></box></geometry>
           <material><ambient>0.55 0.45 0.35 1</ambient><diffuse>0.55 0.45 0.35 1</diffuse></material>
         </visual>
       </link>
     </model>
 
-    <!-- High-contrast vertical strips facing default spawn (-2.2, 0): strong ORB cues. -->
-    <model name="vo_strip_y0"><static>true</static><pose>1.35 0 1.05 0 0 1.571</pose>
+    <!-- Vertical VO strips (~2–2.5 m from spawn at x≈-1.2); face +X travel; yaw=90° = board normal to -X. -->
+    <model name="vo_strip_y0"><static>true</static><pose>0.85 0 1.05 0 0 1.571</pose>
       <link name="link"><collision name="c"><geometry><box><size>0.12 0.45 2.1</size></box></geometry></collision>
       <visual name="v"><geometry><box><size>0.12 0.45 2.1</size></box></geometry>
       <material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0.05 0.05 0.05 1</diffuse></material></visual></link></model>
-    <model name="vo_strip_y1"><static>true</static><pose>1.35 0.55 1.05 0 0 1.571</pose>
+    <model name="vo_strip_y1"><static>true</static><pose>0.85 0.55 1.05 0 0 1.571</pose>
       <link name="link"><collision name="c"><geometry><box><size>0.12 0.45 2.1</size></box></geometry></collision>
       <visual name="v"><geometry><box><size>0.12 0.45 2.1</size></box></geometry>
       <material><ambient>0.95 0.95 0.95 1</ambient><diffuse>0.95 0.95 0.95 1</diffuse></material></visual></link></model>
-    <model name="vo_strip_y2"><static>true</static><pose>1.35 -0.55 1.05 0 0 1.571</pose>
+    <model name="vo_strip_y2"><static>true</static><pose>0.85 -0.55 1.05 0 0 1.571</pose>
       <link name="link"><collision name="c"><geometry><box><size>0.12 0.45 2.1</size></box></geometry></collision>
       <visual name="v"><geometry><box><size>0.12 0.45 2.1</size></box></geometry>
       <material><ambient>0.9 0.15 0.15 1</ambient><diffuse>0.9 0.15 0.15 1</diffuse></material></visual></link></model>
-    <model name="vo_strip_y3"><static>true</static><pose>1.35 1.1 1.05 0 0 1.571</pose>
+    <model name="vo_strip_y3"><static>true</static><pose>0.85 1.1 1.05 0 0 1.571</pose>
       <link name="link"><collision name="c"><geometry><box><size>0.12 0.45 2.1</size></box></geometry></collision>
       <visual name="v"><geometry><box><size>0.12 0.45 2.1</size></box></geometry>
       <material><ambient>0.15 0.9 0.25 1</ambient><diffuse>0.15 0.9 0.25 1</diffuse></material></visual></link></model>
-    <model name="vo_strip_y4"><static>true</static><pose>1.35 -1.1 1.05 0 0 1.571</pose>
+    <model name="vo_strip_y4"><static>true</static><pose>0.85 -1.1 1.05 0 0 1.571</pose>
       <link name="link"><collision name="c"><geometry><box><size>0.12 0.45 2.1</size></box></geometry></collision>
       <visual name="v"><geometry><box><size>0.12 0.45 2.1</size></box></geometry>
       <material><ambient>0.2 0.25 0.95 1</ambient><diffuse>0.2 0.25 0.95 1</diffuse></material></visual></link></model>
+
+    <!-- Second feature plane farther (~3–3.5 m from spawn) for scale diversity. -->
+    <model name="vo_strip_far_a"><static>true</static><pose>2.05 0.4 1.1 0 0 1.571</pose>
+      <link name="link"><collision name="c"><geometry><box><size>0.12 0.5 1.9</size></box></geometry></collision>
+      <visual name="v"><geometry><box><size>0.12 0.5 1.9</size></box></geometry>
+      <material><ambient>0.98 0.45 0.1 1</ambient><diffuse>0.98 0.45 0.1 1</diffuse></material></visual></link></model>
+    <model name="vo_strip_far_b"><static>true</static><pose>2.05 -0.4 1.1 0 0 1.571</pose>
+      <link name="link"><collision name="c"><geometry><box><size>0.12 0.5 1.9</size></box></geometry></collision>
+      <visual name="v"><geometry><box><size>0.12 0.5 1.9</size></box></geometry>
+      <material><ambient>0.12 0.15 0.92 1</ambient><diffuse>0.12 0.15 0.92 1</diffuse></material></visual></link></model>
   </world>
 </sdf>
