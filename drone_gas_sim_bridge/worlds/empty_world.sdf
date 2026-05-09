@@ -1,5 +1,8 @@
 <?xml version="1.0"?>
-<!-- Lightweight indoor scene: perimeter + ceiling + internal clutter for RGB VO / RGB-D SLAM. -->
+<!--
+  Indoor SLAM sandbox — intentionally loud colors + coarse checker floor so it is
+  unmistakable vs the old gray empty plane. Four closed walls + ceiling; boxes/pillars inside.
+-->
 <sdf version="1.9">
   <world name="default">
     <gravity>0 0 -9.8</gravity>
@@ -21,338 +24,186 @@
 
     <light type="directional" name="sun">
       <cast_shadows>true</cast_shadows>
-      <pose>0 0 12 0 0 0</pose>
-      <diffuse>0.85 0.85 0.82 1</diffuse>
-      <specular>0.25 0.25 0.22 1</specular>
+      <pose>0 0 14 0 0 0</pose>
+      <diffuse>0.95 0.95 0.92 1</diffuse>
+      <specular>0.3 0.3 0.28 1</specular>
       <attenuation>
         <range>1000</range>
-        <constant>0.9</constant>
+        <constant>0.85</constant>
         <linear>0.01</linear>
         <quadratic>0.001</quadratic>
       </attenuation>
-      <direction>-0.35 0.15 -1</direction>
+      <direction>-0.25 0.2 -1</direction>
     </light>
 
-    <model name="ground_plane">
+    <!-- Coarse checker floor: four large quadrants (impossible to miss from the air). -->
+    <model name="floor_tile_nw">
       <static>true</static>
+      <pose>-3.0 -3.0 0.02 0 0 0</pose>
       <link name="link">
-        <collision name="collision">
-          <geometry>
-            <plane>
-              <normal>0 0 1</normal>
-              <size>50 50</size>
-            </plane>
-          </geometry>
-        </collision>
-        <visual name="visual">
-          <geometry>
-            <plane>
-              <normal>0 0 1</normal>
-              <size>50 50</size>
-            </plane>
-          </geometry>
-          <material>
-            <ambient>0.38 0.38 0.40 1</ambient>
-            <diffuse>0.48 0.48 0.50 1</diffuse>
-          </material>
+        <collision name="c"><geometry><box><size>6.1 6.1 0.04</size></box></geometry></collision>
+        <visual name="v">
+          <geometry><box><size>6.1 6.1 0.04</size></box></geometry>
+          <material><ambient>0.92 0.92 0.95 1</ambient><diffuse>0.92 0.92 0.95 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+    <model name="floor_tile_ne">
+      <static>true</static>
+      <pose>3.0 -3.0 0.02 0 0 0</pose>
+      <link name="link">
+        <collision name="c"><geometry><box><size>6.1 6.1 0.04</size></box></geometry></collision>
+        <visual name="v">
+          <geometry><box><size>6.1 6.1 0.04</size></box></geometry>
+          <material><ambient>0.12 0.12 0.14 1</ambient><diffuse>0.12 0.12 0.14 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+    <model name="floor_tile_sw">
+      <static>true</static>
+      <pose>-3.0 3.0 0.02 0 0 0</pose>
+      <link name="link">
+        <collision name="c"><geometry><box><size>6.1 6.1 0.04</size></box></geometry></collision>
+        <visual name="v">
+          <geometry><box><size>6.1 6.1 0.04</size></box></geometry>
+          <material><ambient>0.12 0.12 0.14 1</ambient><diffuse>0.12 0.12 0.14 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+    <model name="floor_tile_se">
+      <static>true</static>
+      <pose>3.0 3.0 0.02 0 0 0</pose>
+      <link name="link">
+        <collision name="c"><geometry><box><size>6.1 6.1 0.04</size></box></geometry></collision>
+        <visual name="v">
+          <geometry><box><size>6.1 6.1 0.04</size></box></geometry>
+          <material><ambient>0.92 0.92 0.95 1</ambient><diffuse>0.92 0.92 0.95 1</diffuse></material>
         </visual>
       </link>
     </model>
 
-    <!-- Closed room ~16 m square, full perimeter walls (primitives only). -->
-    <model name="room_wall_north">
+    <!-- Closed room (~12 m usable), four saturated walls -->
+    <model name="wall_north">
       <static>true</static>
-      <pose>0 8.0 1.5 0 0 0</pose>
+      <pose>0 6.05 1.65 0 0 0</pose>
       <link name="link">
-        <collision name="collision">
-          <geometry><box><size>16.5 0.35 3.0</size></box></geometry>
-        </collision>
-        <visual name="visual">
-          <geometry><box><size>16.5 0.35 3.0</size></box></geometry>
-          <material><ambient>0.62 0.62 0.68 1</ambient><diffuse>0.62 0.62 0.68 1</diffuse></material>
+        <collision name="c"><geometry><box><size>12.5 0.35 3.35</size></box></geometry></collision>
+        <visual name="v">
+          <geometry><box><size>12.5 0.35 3.35</size></box></geometry>
+          <material><ambient>0.95 0.25 0.35 1</ambient><diffuse>0.95 0.25 0.35 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+    <model name="wall_south">
+      <static>true</static>
+      <pose>0 -6.05 1.65 0 0 0</pose>
+      <link name="link">
+        <collision name="c"><geometry><box><size>12.5 0.35 3.35</size></box></geometry></collision>
+        <visual name="v">
+          <geometry><box><size>12.5 0.35 3.35</size></box></geometry>
+          <material><ambient>0.25 0.55 0.95 1</ambient><diffuse>0.25 0.55 0.95 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+    <model name="wall_east">
+      <static>true</static>
+      <pose>6.05 0 1.65 0 0 0</pose>
+      <link name="link">
+        <collision name="c"><geometry><box><size>0.35 12.5 3.35</size></box></geometry></collision>
+        <visual name="v">
+          <geometry><box><size>0.35 12.5 3.35</size></box></geometry>
+          <material><ambient>0.35 0.85 0.35 1</ambient><diffuse>0.35 0.85 0.35 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+    <model name="wall_west">
+      <static>true</static>
+      <pose>-6.05 0 1.65 0 0 0</pose>
+      <link name="link">
+        <collision name="c"><geometry><box><size>0.35 12.5 3.35</size></box></geometry></collision>
+        <visual name="v">
+          <geometry><box><size>0.35 12.5 3.35</size></box></geometry>
+          <material><ambient>0.85 0.55 0.15 1</ambient><diffuse>0.85 0.55 0.15 1</diffuse></material>
         </visual>
       </link>
     </model>
 
-    <model name="room_wall_south">
-      <static>true</static>
-      <pose>0 -8.0 1.5 0 0 0</pose>
-      <link name="link">
-        <collision name="collision">
-          <geometry><box><size>16.5 0.35 3.0</size></box></geometry>
-        </collision>
-        <visual name="visual">
-          <geometry><box><size>16.5 0.35 3.0</size></box></geometry>
-          <material><ambient>0.60 0.60 0.66 1</ambient><diffuse>0.60 0.60 0.66 1</diffuse></material>
-        </visual>
-      </link>
-    </model>
-
-    <model name="room_wall_east">
-      <static>true</static>
-      <pose>8.0 0 1.5 0 0 0</pose>
-      <link name="link">
-        <collision name="collision">
-          <geometry><box><size>0.35 16.5 3.0</size></box></geometry>
-        </collision>
-        <visual name="visual">
-          <geometry><box><size>0.35 16.5 3.0</size></box></geometry>
-          <material><ambient>0.64 0.58 0.58 1</ambient><diffuse>0.64 0.58 0.58 1</diffuse></material>
-        </visual>
-      </link>
-    </model>
-
-    <model name="room_wall_west">
-      <static>true</static>
-      <pose>-8.0 0 1.5 0 0 0</pose>
-      <link name="link">
-        <collision name="collision">
-          <geometry><box><size>0.35 16.5 3.0</size></box></geometry>
-        </collision>
-        <visual name="visual">
-          <geometry><box><size>0.35 16.5 3.0</size></box></geometry>
-          <material><ambient>0.64 0.58 0.58 1</ambient><diffuse>0.64 0.58 0.58 1</diffuse></material>
-        </visual>
-      </link>
-    </model>
-
-    <!-- Low ceiling slab for clear indoor enclosure (visual + collision). -->
     <model name="room_ceiling">
       <static>true</static>
-      <pose>0 0 3.05 0 0 0</pose>
+      <pose>0 0 3.35 0 0 0</pose>
       <link name="link">
-        <collision name="collision">
-          <geometry><box><size>16.0 16.0 0.2</size></box></geometry>
-        </collision>
-        <visual name="visual">
-          <geometry><box><size>16.0 16.0 0.2</size></box></geometry>
-          <material><ambient>0.55 0.55 0.58 1</ambient><diffuse>0.55 0.55 0.58 1</diffuse></material>
+        <collision name="c"><geometry><box><size>12.0 12.0 0.25</size></box></geometry></collision>
+        <visual name="v">
+          <geometry><box><size>12.0 12.0 0.25</size></box></geometry>
+          <material><ambient>0.78 0.78 0.82 1</ambient><diffuse>0.78 0.78 0.82 1</diffuse></material>
         </visual>
       </link>
     </model>
 
-    <model name="center_box_feature">
+    <!-- Internal obstacles (mixed height + color for visual features). -->
+    <model name="ob_box_a">
       <static>true</static>
-      <pose>2.5 1.2 0.6 0 0 0.35</pose>
+      <pose>2.2 2.0 0.55 0 0 0.4</pose>
       <link name="link">
-        <collision name="collision">
-          <geometry><box><size>1.4 1.0 1.2</size></box></geometry>
-        </collision>
-        <visual name="visual">
-          <geometry><box><size>1.4 1.0 1.2</size></box></geometry>
-          <material><ambient>0.85 0.30 0.25 1</ambient><diffuse>0.85 0.30 0.25 1</diffuse></material>
+        <collision name="c"><geometry><box><size>1.4 1.0 1.1</size></box></geometry></collision>
+        <visual name="v">
+          <geometry><box><size>1.4 1.0 1.1</size></box></geometry>
+          <material><ambient>0.9 0.2 0.75 1</ambient><diffuse>0.9 0.2 0.75 1</diffuse></material>
         </visual>
       </link>
     </model>
-
-    <model name="short_wall_feature">
+    <model name="ob_box_b">
       <static>true</static>
-      <pose>-2.0 -0.8 0.75 0 0 1.1</pose>
+      <pose>-2.8 1.5 0.40 0 0 -0.3</pose>
       <link name="link">
-        <collision name="collision">
-          <geometry><box><size>3.2 0.28 1.5</size></box></geometry>
-        </collision>
-        <visual name="visual">
-          <geometry><box><size>3.2 0.28 1.5</size></box></geometry>
-          <material><ambient>0.25 0.40 0.82 1</ambient><diffuse>0.25 0.40 0.82 1</diffuse></material>
+        <collision name="c"><geometry><box><size>1.0 1.4 0.8</size></box></geometry></collision>
+        <visual name="v">
+          <geometry><box><size>1.0 1.4 0.8</size></box></geometry>
+          <material><ambient>0.15 0.85 0.85 1</ambient><diffuse>0.15 0.85 0.85 1</diffuse></material>
         </visual>
       </link>
     </model>
-
-    <model name="pillar_feature_1">
+    <model name="ob_box_c">
       <static>true</static>
-      <pose>-4.2 3.5 1.0 0 0 0</pose>
+      <pose>0.5 -3.0 0.75 0 0 1.0</pose>
       <link name="link">
-        <collision name="collision">
-          <geometry><cylinder><radius>0.32</radius><length>2.0</length></cylinder></geometry>
-        </collision>
-        <visual name="visual">
-          <geometry><cylinder><radius>0.32</radius><length>2.0</length></cylinder></geometry>
-          <material><ambient>0.25 0.75 0.35 1</ambient><diffuse>0.25 0.75 0.35 1</diffuse></material>
+        <collision name="c"><geometry><box><size>2.2 0.6 1.5</size></box></geometry></collision>
+        <visual name="v">
+          <geometry><box><size>2.2 0.6 1.5</size></box></geometry>
+          <material><ambient>0.95 0.85 0.20 1</ambient><diffuse>0.95 0.85 0.20 1</diffuse></material>
         </visual>
       </link>
     </model>
-
-    <model name="pillar_feature_2">
+    <model name="ob_pillar_1">
       <static>true</static>
-      <pose>4.0 -3.2 1.0 0 0 0</pose>
+      <pose>-3.5 -2.2 1.1 0 0 0</pose>
       <link name="link">
-        <collision name="collision">
-          <geometry><cylinder><radius>0.28</radius><length>2.0</length></cylinder></geometry>
-        </collision>
-        <visual name="visual">
-          <geometry><cylinder><radius>0.28</radius><length>2.0</length></cylinder></geometry>
-          <material><ambient>0.85 0.72 0.24 1</ambient><diffuse>0.85 0.72 0.24 1</diffuse></material>
+        <collision name="c"><geometry><cylinder><radius>0.35</radius><length>2.2</length></cylinder></geometry></collision>
+        <visual name="v">
+          <geometry><cylinder><radius>0.35</radius><length>2.2</length></cylinder></geometry>
+          <material><ambient>0.45 0.30 0.90 1</ambient><diffuse>0.45 0.30 0.90 1</diffuse></material>
         </visual>
       </link>
     </model>
-
-    <model name="box_cluster_a">
+    <model name="ob_pillar_2">
       <static>true</static>
-      <pose>-3.0 -3.5 0.45 0 0 0.5</pose>
+      <pose>3.6 -1.2 0.9 0 0 0</pose>
       <link name="link">
-        <collision name="collision">
-          <geometry><box><size>0.9 0.9 0.9</size></box></geometry>
-        </collision>
-        <visual name="visual">
-          <geometry><box><size>0.9 0.9 0.9</size></box></geometry>
-          <material><ambient>0.75 0.35 0.65 1</ambient><diffuse>0.75 0.35 0.65 1</diffuse></material>
+        <collision name="c"><geometry><cylinder><radius>0.28</radius><length>1.8</length></cylinder></geometry></collision>
+        <visual name="v">
+          <geometry><cylinder><radius>0.28</radius><length>1.8</length></cylinder></geometry>
+          <material><ambient>0.20 0.35 0.95 1</ambient><diffuse>0.20 0.35 0.95 1</diffuse></material>
         </visual>
       </link>
     </model>
-
-    <model name="box_cluster_b">
+    <model name="partition_short">
       <static>true</static>
-      <pose>3.8 4.0 0.55 0 0 -0.2</pose>
+      <pose>-0.5 0 1.0 0 0 0</pose>
       <link name="link">
-        <collision name="collision">
-          <geometry><box><size>1.0 0.7 1.1</size></box></geometry>
-        </collision>
-        <visual name="visual">
-          <geometry><box><size>1.0 0.7 1.1</size></box></geometry>
-          <material><ambient>0.30 0.65 0.75 1</ambient><diffuse>0.30 0.65 0.75 1</diffuse></material>
-        </visual>
-      </link>
-    </model>
-
-    <model name="divider_wall_inner">
-      <static>true</static>
-      <pose>0 0 0.9 0 0 0</pose>
-      <link name="link">
-        <collision name="collision">
-          <geometry><box><size>0.22 6.0 1.8</size></box></geometry>
-        </collision>
-        <visual name="visual">
-          <geometry><box><size>0.22 6.0 1.8</size></box></geometry>
-          <material><ambient>0.70 0.68 0.55 1</ambient><diffuse>0.70 0.68 0.55 1</diffuse></material>
-        </visual>
-      </link>
-    </model>
-
-    <!-- Corridor-style partition with offset opening (navigation + richer wall texture). -->
-    <model name="partition_corridor_ns">
-      <static>true</static>
-      <pose>-3.2 5.6 1.05 0 0 0</pose>
-      <link name="link">
-        <collision name="collision">
-          <geometry><box><size>9.6 0.24 2.1</size></box></geometry>
-        </collision>
-        <visual name="visual">
-          <geometry><box><size>9.6 0.24 2.1</size></box></geometry>
-          <material><ambient>0.72 0.62 0.48 1</ambient><diffuse>0.72 0.62 0.48 1</diffuse></material>
-        </visual>
-      </link>
-    </model>
-
-    <model name="partition_office_WE">
-      <static>true</static>
-      <pose>5.2 -1.0 1.1 0 0 1.571</pose>
-      <link name="link">
-        <collision name="collision">
-          <geometry><box><size>7.8 0.22 2.15</size></box></geometry>
-        </collision>
-        <visual name="visual">
-          <geometry><box><size>7.8 0.22 2.15</size></box></geometry>
-          <material><ambient>0.52 0.58 0.72 1</ambient><diffuse>0.52 0.58 0.72 1</diffuse></material>
-        </visual>
-      </link>
-    </model>
-
-    <model name="corner_nook_wall">
-      <static>true</static>
-      <pose>-6.0 -6.5 1.0 0 0 0.75</pose>
-      <link name="link">
-        <collision name="collision">
-          <geometry><box><size>5.8 0.20 2.05</size></box></geometry>
-        </collision>
-        <visual name="visual">
-          <geometry><box><size>5.8 0.20 2.05</size></box></geometry>
-          <material><ambient>0.82 0.78 0.42 1</ambient><diffuse>0.82 0.78 0.42 1</diffuse></material>
-        </visual>
-      </link>
-    </model>
-
-    <!-- Narrow wall ridges (high-contrast silhouettes when moving). -->
-    <model name="wall_ridge_a">
-      <static>true</static>
-      <pose>7.65 3.0 1.5 0 0 0</pose>
-      <link name="link">
-        <collision name="collision">
-          <geometry><box><size>0.12 2.2 1.6</size></box></geometry>
-        </collision>
-        <visual name="visual">
-          <geometry><box><size>0.12 2.2 1.6</size></box></geometry>
-          <material><ambient>0.15 0.15 0.18 1</ambient><diffuse>0.15 0.15 0.18 1</diffuse></material>
-        </visual>
-      </link>
-    </model>
-
-    <model name="wall_ridge_b">
-      <static>true</static>
-      <pose>-7.68 -2.4 1.45 0 0 0</pose>
-      <link name="link">
-        <collision name="collision">
-          <geometry><box><size>0.12 1.8 1.9</size></box></geometry>
-        </collision>
-        <visual name="visual">
-          <geometry><box><size>0.12 1.8 1.9</size></box></geometry>
-          <material><ambient>0.88 0.35 0.22 1</ambient><diffuse>0.88 0.35 0.22 1</diffuse></material>
-        </visual>
-      </link>
-    </model>
-
-    <model name="tall_pillar_c">
-      <static>true</static>
-      <pose>1.2 -5.5 1.25 0 0 0</pose>
-      <link name="link">
-        <collision name="collision">
-          <geometry><cylinder><radius>0.22</radius><length>2.5</length></cylinder></geometry>
-        </collision>
-        <visual name="visual">
-          <geometry><cylinder><radius>0.22</radius><length>2.5</length></cylinder></geometry>
-          <material><ambient>0.35 0.35 0.82 1</ambient><diffuse>0.35 0.35 0.82 1</diffuse></material>
-        </visual>
-      </link>
-    </model>
-
-    <model name="low_platform">
-      <static>true</static>
-      <pose>-1.8 4.0 0.25 0 0 -0.4</pose>
-      <link name="link">
-        <collision name="collision">
-          <geometry><box><size>2.4 1.5 0.5</size></box></geometry>
-        </collision>
-        <visual name="visual">
-          <geometry><box><size>2.4 1.5 0.5</size></box></geometry>
-          <material><ambient>0.45 0.42 0.38 1</ambient><diffuse>0.45 0.42 0.38 1</diffuse></material>
-        </visual>
-      </link>
-    </model>
-
-    <model name="stack_boxes_1">
-      <static>true</static>
-      <pose>6.5 5.0 0.5 0 0 0.9</pose>
-      <link name="link">
-        <collision name="collision">
-          <geometry><box><size>1.15 1.15 1.0</size></box></geometry>
-        </collision>
-        <visual name="visual">
-          <geometry><box><size>1.15 1.15 1.0</size></box></geometry>
-          <material><ambient>0.75 0.55 0.18 1</ambient><diffuse>0.75 0.55 0.18 1</diffuse></material>
-        </visual>
-      </link>
-    </model>
-
-    <model name="stack_boxes_2">
-      <static>true</static>
-      <pose>-4.8 6.8 0.55 0 0 -0.35</pose>
-      <link name="link">
-        <collision name="collision">
-          <geometry><box><size>0.85 0.85 1.1</size></box></geometry>
-        </collision>
-        <visual name="visual">
-          <geometry><box><size>0.85 0.85 1.1</size></box></geometry>
-          <material><ambient>0.22 0.62 0.48 1</ambient><diffuse>0.22 0.62 0.48 1</diffuse></material>
+        <collision name="c"><geometry><box><size>0.22 5.5 2.0</size></box></geometry></collision>
+        <visual name="v">
+          <geometry><box><size>0.22 5.5 2.0</size></box></geometry>
+          <material><ambient>0.55 0.45 0.35 1</ambient><diffuse>0.55 0.45 0.35 1</diffuse></material>
         </visual>
       </link>
     </model>

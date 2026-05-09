@@ -1,21 +1,11 @@
-# Bridges Gazebo Harmonic (GZ transport) ↔ ROS 2 with names expected by RTAB-Map / RViz.
+# ros_gz parameter_bridge YAML (Harmonic ⇄ ROS 2 Jazzy).
 #
-# IMPORTANT (simple_drone model.sdf):
-#   Sensor type must be rgbd_camera (RgbdCameraSensor). With <topic>/rgbd_camera</topic>,
-#   Gazebo publishes aligned streams at:
-#     /rgbd_camera/image
-#     /rgbd_camera/depth_image
-#     /rgbd_camera/camera_info
-#     /rgbd_camera/points
+# ROS side keeps RTAB-Map topic names (/rgbd_camera/...).
+# GZ transport uses the same strings once the sdf <topic> is a base name (rgbd_camera),
+# not rgbd_camera/image — see models/simple_drone/model.sdf.
 #
-# If you mistakenly use sdf type depth_camera (DepthCameraSensor), depth is published on the
-# bare <topic> (not .../depth_image) and PointCloudPacked uses <topic>/points only when the base
-# topic is not split that way—in practice ROS was bridged to /rgbd_camera/depth_image while
-# Gazebo never advertised that string, so depth stayed empty ("Did not receive data since 5 s").
-#
-# Historical Harmonic setups sometimes exposed point clouds under /rgbd_camera/image/points when
-# the depth-only sensor reused an /image-based prefix. With rgbd_camera here, /rgbd_camera/points
-# is the native Gazebo topic—no remap required in this file.
+# Explicit ros_topic_name + gz_topic_name avoids ambiguity if your shell or tools
+# add/strip slashes; both sides use absolute-style names starting with '/'.
 
 - topic_name: /clock
   ros_type_name: rosgraph_msgs/msg/Clock
@@ -28,25 +18,30 @@
   gz_type_name: gz.msgs.Twist
   direction: ROS_TO_GZ
 
-- topic_name: /rgbd_camera/image
+- ros_topic_name: /rgbd_camera/image
+  gz_topic_name: /rgbd_camera/image
   ros_type_name: sensor_msgs/msg/Image
   gz_type_name: gz.msgs.Image
   direction: GZ_TO_ROS
   qos_profile: SENSOR_DATA
 
-- topic_name: /rgbd_camera/camera_info
+- ros_topic_name: /rgbd_camera/camera_info
+  gz_topic_name: /rgbd_camera/camera_info
   ros_type_name: sensor_msgs/msg/CameraInfo
   gz_type_name: gz.msgs.CameraInfo
   direction: GZ_TO_ROS
   qos_profile: SENSOR_DATA
 
-- topic_name: /rgbd_camera/depth_image
+- ros_topic_name: /rgbd_camera/depth_image
+  gz_topic_name: /rgbd_camera/depth_image
   ros_type_name: sensor_msgs/msg/Image
   gz_type_name: gz.msgs.Image
   direction: GZ_TO_ROS
   qos_profile: SENSOR_DATA
 
-- topic_name: /rgbd_camera/points
+# Native RgbdCameraSensor point cloud publisher: /rgbd_camera/points
+- ros_topic_name: /rgbd_camera/points
+  gz_topic_name: /rgbd_camera/points
   ros_type_name: sensor_msgs/msg/PointCloud2
   gz_type_name: gz.msgs.PointCloudPacked
   direction: GZ_TO_ROS

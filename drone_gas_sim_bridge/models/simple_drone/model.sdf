@@ -40,30 +40,27 @@
       </visual>
 
       <!--
-        Use type="rgbd_camera" (RgbdCameraSensor in gz-sensors), not depth_camera.
+        RGB-D: type MUST be rgbd_camera (RgbdCameraSensor).
 
-        depth_camera (DepthCameraSensor) publishes:
-          - float depth image on the bare <topic> name (e.g. /rgbd_camera), not .../depth_image
-          - point cloud on <topic>/points
+        TOPIC MUST be a BASE NAME (no /image suffix).
 
-        That layout does not match ROS / RTAB, which expect siblings:
-          /rgbd_camera/image, /rgbd_camera/depth_image, /rgbd_camera/camera_info, /rgbd_camera/points
+        gz-sensors publishes fixed suffixes ON that base:
+          <topic>X</topic>  ->  /X/image, /X/depth_image, /X/camera_info, /X/points
+        (Harmonic gz topic listing usually shows leading slash: /rgbd_camera/depth_image.)
 
-        rgbd_camera with <topic>/rgbd_camera</topic> makes Gazebo Harmonic advertise:
-          - /rgbd_camera/image          (color)
-          - /rgbd_camera/depth_image    (R_FLOAT32 depth; needs a subscriber to render)
-          - /rgbd_camera/camera_info
-          - /rgbd_camera/points         (PointCloudPacked; needs a subscriber to render)
+        If you set <topic>rgbd_camera/image</topic>, the BASE becomes ".../image" and
+        DepthCamera-style nesting appears: depth + cloud ride under that prefix so you see
+        /rgbd_camera/image/points WITHOUT a sibling /rgbd_camera/depth_image — exactly
+        the broken layout you were debugging.
 
-        SDF does not use <depth_image_topic> / <point_cloud_topic> for these sensors; topic
-        names are fixed by the sensor implementation as above.
+        Element order follows upstream gz-sim examples/worlds/sensors_demo.sdf (camera block
+        first, then always_on/update_rate/visualize/topic).
+
+        Topic string: official demo uses "rgbd_camera" without a leading slash; transport
+        still resolves to /rgbd_camera/... in gz topic -l.
       -->
       <sensor name="rgbd_camera" type="rgbd_camera">
         <pose>0.18 0 0 0 0 0</pose>
-        <always_on>true</always_on>
-        <update_rate>20</update_rate>
-        <visualize>false</visualize>
-        <topic>/rgbd_camera</topic>
         <camera>
           <horizontal_fov>1.0472</horizontal_fov>
           <image>
@@ -75,13 +72,12 @@
             <near>0.10</near>
             <far>10.0</far>
           </clip>
-          <depth_camera>
-            <clip>
-              <near>0.10</near>
-              <far>10.0</far>
-            </clip>
-          </depth_camera>
         </camera>
+        <always_on>true</always_on>
+        <update_rate>20</update_rate>
+        <visualize>false</visualize>
+        <topic>rgbd_camera</topic>
+        <enable_metrics>true</enable_metrics>
       </sensor>
     </link>
 
