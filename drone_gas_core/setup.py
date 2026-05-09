@@ -27,6 +27,7 @@ setup(
             "chemical_mapper_node = drone_gas_core.chemical_mapper_node:main",
             "exploration_controller_node = drone_gas_core.exploration_controller_node:main",
             "cmd_vel_watchdog_node = drone_gas_core.cmd_vel_watchdog_node:main",
+            "visual_odometry_smoke_motion = drone_gas_core.visual_odometry_smoke_motion:main",
         ],
     },
 )

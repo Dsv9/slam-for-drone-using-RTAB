@@ -6,3 +6,5 @@ cmd_vel_watchdog_node:
     cmd_timeout_sec: 0.5
     odom_timeout_sec: 1.0
     publish_hz: 20.0
+    # full_system.launch.py overrides require_odom to false for Gazebo VO bring-up.
+    require_odom: true

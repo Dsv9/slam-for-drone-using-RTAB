@@ -20,10 +20,27 @@ def generate_launch_description():
         launch_arguments={"gz_args": f"-r {world_path}"}.items(),
     )
 
+    # Spawn in open floor (+X into the room) with nose toward rich features ahead.
+    # World floor ~z=0.02; hover high enough that the resized hull clears tiles.
     spawn_drone = Node(
         package="ros_gz_sim",
         executable="create",
-        arguments=["-world", "default", "-name", "simple_drone", "-file", model_path],
+        arguments=[
+            "-world",
+            "default",
+            "-name",
+            "simple_drone",
+            "-file",
+            model_path,
+            "-x",
+            "-2.2",
+            "-y",
+            "0",
+            "-z",
+            "0.58",
+            "-Y",
+            "0",
+        ],
         output="screen",
     )
 

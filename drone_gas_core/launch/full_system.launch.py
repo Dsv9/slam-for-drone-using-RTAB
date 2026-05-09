@@ -60,7 +60,8 @@ def generate_launch_description():
                 executable="static_transform_publisher",
                 name="rgbd_camera_static_tf",
                 output="screen",
-                arguments=["0.18", "0", "0", "0", "0", "0", "base_link", "rgbd_camera"],
+                # Must match RGBD sensor pose in drone_gas_sim_bridge/models/simple_drone/model.sdf
+                arguments=["0.30", "0", "0.055", "0", "0", "0", "base_link", "rgbd_camera"],
                 parameters=[{"use_sim_time": True}],
             ),
             Node(
@@ -117,7 +118,12 @@ def generate_launch_description():
                 output="screen",
                 parameters=[
                     os.path.join(pkg_core, "config", "cmd_vel_watchdog.yaml"),
-                    {"use_sim_time": True},
+                    {
+                        # Allow slow open-loop motion before rgbd_odometry publishes valid odom
+                        # (exploration + smoke tests). Set true for hardware safety if repurpose.
+                        "require_odom": False,
+                        "use_sim_time": True,
+                    },
                 ],
             ),
             Node(

@@ -207,5 +207,27 @@
         </visual>
       </link>
     </model>
+
+    <!-- High-contrast vertical strips facing default spawn (-2.2, 0): strong ORB cues. -->
+    <model name="vo_strip_y0"><static>true</static><pose>1.35 0 1.05 0 0 1.571</pose>
+      <link name="link"><collision name="c"><geometry><box><size>0.12 0.45 2.1</size></box></geometry></collision>
+      <visual name="v"><geometry><box><size>0.12 0.45 2.1</size></box></geometry>
+      <material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0.05 0.05 0.05 1</diffuse></material></visual></link></model>
+    <model name="vo_strip_y1"><static>true</static><pose>1.35 0.55 1.05 0 0 1.571</pose>
+      <link name="link"><collision name="c"><geometry><box><size>0.12 0.45 2.1</size></box></geometry></collision>
+      <visual name="v"><geometry><box><size>0.12 0.45 2.1</size></box></geometry>
+      <material><ambient>0.95 0.95 0.95 1</ambient><diffuse>0.95 0.95 0.95 1</diffuse></material></visual></link></model>
+    <model name="vo_strip_y2"><static>true</static><pose>1.35 -0.55 1.05 0 0 1.571</pose>
+      <link name="link"><collision name="c"><geometry><box><size>0.12 0.45 2.1</size></box></geometry></collision>
+      <visual name="v"><geometry><box><size>0.12 0.45 2.1</size></box></geometry>
+      <material><ambient>0.9 0.15 0.15 1</ambient><diffuse>0.9 0.15 0.15 1</diffuse></material></visual></link></model>
+    <model name="vo_strip_y3"><static>true</static><pose>1.35 1.1 1.05 0 0 1.571</pose>
+      <link name="link"><collision name="c"><geometry><box><size>0.12 0.45 2.1</size></box></geometry></collision>
+      <visual name="v"><geometry><box><size>0.12 0.45 2.1</size></box></geometry>
+      <material><ambient>0.15 0.9 0.25 1</ambient><diffuse>0.15 0.9 0.25 1</diffuse></material></visual></link></model>
+    <model name="vo_strip_y4"><static>true</static><pose>1.35 -1.1 1.05 0 0 1.571</pose>
+      <link name="link"><collision name="c"><geometry><box><size>0.12 0.45 2.1</size></box></geometry></collision>
+      <visual name="v"><geometry><box><size>0.12 0.45 2.1</size></box></geometry>
+      <material><ambient>0.2 0.25 0.95 1</ambient><diffuse>0.2 0.25 0.95 1</diffuse></material></visual></link></model>
   </world>
 </sdf>

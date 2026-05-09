@@ -1,17 +1,18 @@
 <?xml version="1.0"?>
 <sdf version="1.9">
+  <!-- World pose is set by ros_gz_sim create (-x -y -z -Y). Keep this at origin. -->
   <model name="simple_drone">
-    <pose>0 0 0.35 0 0 0</pose>
+    <pose>0 0 0 0 0 0</pose>
 
     <link name="base_link">
       <pose>0 0 0 0 0 0</pose>
 
       <inertial>
-        <mass>1.0</mass>
+        <mass>1.2</mass>
         <inertia>
-          <ixx>0.02</ixx>
-          <iyy>0.02</iyy>
-          <izz>0.04</izz>
+          <ixx>0.04</ixx>
+          <iyy>0.04</iyy>
+          <izz>0.06</izz>
           <ixy>0.0</ixy>
           <ixz>0.0</ixz>
           <iyz>0.0</iyz>
@@ -21,7 +22,7 @@
       <collision name="body_collision">
         <geometry>
           <box>
-            <size>0.40 0.40 0.12</size>
+            <size>0.72 0.52 0.14</size>
           </box>
         </geometry>
       </collision>
@@ -29,13 +30,56 @@
       <visual name="body_visual">
         <geometry>
           <box>
-            <size>0.40 0.40 0.12</size>
+            <size>0.72 0.52 0.14</size>
           </box>
         </geometry>
         <material>
-          <ambient>0.2 0.2 0.8 1.0</ambient>
-          <diffuse>0.2 0.2 0.8 1.0</diffuse>
-          <specular>0.1 0.1 0.1 1.0</specular>
+          <ambient>0.15 0.35 0.95 1.0</ambient>
+          <diffuse>0.15 0.35 0.95 1.0</diffuse>
+          <specular>0.2 0.2 0.2 1.0</specular>
+        </material>
+      </visual>
+
+      <!-- Forward (+X) nose marker: easy to see heading in Gazebo. -->
+      <visual name="nose_marker">
+        <pose>0.46 0 0 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.14 0.38 0.10</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.2 0.95 0.25 1.0</ambient>
+          <diffuse>0.2 0.95 0.25 1.0</diffuse>
+        </material>
+      </visual>
+
+      <!-- Tall mast so the vehicle is visible from above / distance. -->
+      <visual name="mast">
+        <pose>0 0 0.16 0 0 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.05</radius>
+            <length>0.45</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.95 0.85 0.1 1.0</ambient>
+          <diffuse>0.95 0.85 0.1 1.0</diffuse>
+        </material>
+      </visual>
+
+      <!-- Small marker next to sensor line-of-sight (visual only). -->
+      <visual name="camera_bezel">
+        <pose>0.36 0.12 0.02 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.06 0.06 0.05</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.95 0.2 0.85 1.0</ambient>
+          <diffuse>0.95 0.2 0.85 1.0</diffuse>
         </material>
       </visual>
 
@@ -43,24 +87,15 @@
         RGB-D: type MUST be rgbd_camera (RgbdCameraSensor).
 
         TOPIC MUST be a BASE NAME (no /image suffix).
+        Gazebo appends: /image, /depth_image, /camera_info, /points
 
-        gz-sensors publishes fixed suffixes ON that base:
-          <topic>X</topic>  ->  /X/image, /X/depth_image, /X/camera_info, /X/points
-        (Harmonic gz topic listing usually shows leading slash: /rgbd_camera/depth_image.)
+        Camera is offset on +X (forward) and slightly +Z so it clears the hull and
+        looks into the room when the model yaw is 0 (velocity plugin +X forward).
 
-        If you set <topic>rgbd_camera/image</topic>, the BASE becomes ".../image" and
-        DepthCamera-style nesting appears: depth + cloud ride under that prefix so you see
-        /rgbd_camera/image/points WITHOUT a sibling /rgbd_camera/depth_image — exactly
-        the broken layout you were debugging.
-
-        Element order follows upstream gz-sim examples/worlds/sensors_demo.sdf (camera block
-        first, then always_on/update_rate/visualize/topic).
-
-        Topic string: official demo uses "rgbd_camera" without a leading slash; transport
-        still resolves to /rgbd_camera/... in gz topic -l.
+        Match base_link -> rgbd_camera static TF in full_system.launch.py to this pose.
       -->
       <sensor name="rgbd_camera" type="rgbd_camera">
-        <pose>0.18 0 0 0 0 0</pose>
+        <pose>0.30 0 0.055 0 0 0</pose>
         <camera>
           <horizontal_fov>1.0472</horizontal_fov>
           <image>

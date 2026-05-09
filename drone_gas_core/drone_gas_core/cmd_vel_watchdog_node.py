@@ -13,8 +13,10 @@ class CmdVelWatchdogNode(Node):
         self.declare_parameter("cmd_timeout_sec", 0.5)
         self.declare_parameter("odom_timeout_sec", 1.0)
         self.declare_parameter("publish_hz", 20.0)
+        self.declare_parameter("require_odom", True)
         self.cmd_timeout = float(self.get_parameter("cmd_timeout_sec").value)
         self.odom_timeout = float(self.get_parameter("odom_timeout_sec").value)
+        self.require_odom = bool(self.get_parameter("require_odom").value)
         self.last_cmd = Twist()
         self.last_cmd_t = None
         self.last_odom_t = None
@@ -47,7 +49,8 @@ class CmdVelWatchdogNode(Node):
             self.last_odom_t is not None
             and (now - self.last_odom_t).nanoseconds * 1e-9 <= self.odom_timeout
         )
-        self.pub.publish(self.last_cmd if cmd_ok and odom_ok else Twist())
+        allow = cmd_ok and (odom_ok or not self.require_odom)
+        self.pub.publish(self.last_cmd if allow else Twist())
 
 
 def main() -> None:

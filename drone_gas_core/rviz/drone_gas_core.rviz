@@ -2,53 +2,98 @@ Panels:
   - Class: rviz_common/Displays
     Name: Displays
 Visualization Manager:
-  Class: ""
+  Class: rviz_default_plugins::DisplayManager
   Displays:
     - Class: rviz_default_plugins/Grid
+      Enabled: true
       Name: Grid
-      Enabled: true
+      Plane: XY
+      Plane Cell Count: 20
+      Cell Size: 1
     - Class: rviz_default_plugins/TF
+      Enabled: true
+      Show Axes: true
+      Show Arrows: false
       Name: TF
-      Enabled: true
-    - Class: rviz_default_plugins/Map
-      Name: GasMap
-      Enabled: true
-      Topic:
-        Value: /gas/chemical_map
-    - Class: rviz_default_plugins/Pose
-      Name: RTABPose
-      Enabled: true
-      Topic:
-        Value: /rtabmap/localization_pose
-    - Class: rviz_default_plugins/PointCloud2
-      Name: RGBDPoints
-      Enabled: true
-      Topic:
-        Value: /rgbd_camera/points
     - Class: rviz_default_plugins/Image
-      Name: RGBImage
       Enabled: true
+      Name: RGB (/rgbd_camera/image)
       Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Best Effort
         Value: /rgbd_camera/image
     - Class: rviz_default_plugins/Image
-      Name: DepthImage
       Enabled: true
+      Name: Depth (/rgbd_camera/depth_image)
       Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Best Effort
         Value: /rgbd_camera/depth_image
-    - Class: rviz_default_plugins/Odometry
-      Name: RTABOdometry
+    - Alpha: 1
+      Class: rviz_default_plugins/PointCloud2
       Enabled: true
+      Name: Points (/rgbd_camera/points)
+      Style: Points
+      Size (m): 0.02
       Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Best Effort
+        Value: /rgbd_camera/points
+      Use Fixed Frame: true
+    - Alpha: 1
+      Class: rviz_default_plugins/Odometry
+      Axes Radius: 0.02
+      Axes Length: 0.25
+      Color: 255; 85; 0
+      Covariance:
+        Orientation:
+          Alpha: 0
+          Value: false
+        Position:
+          Alpha: 0
+          Value: false
+      Enabled: true
+      Shape: Arrow
+      Name: VO Odometry (/rtabmap/odom)
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Best Effort
         Value: /rtabmap/odom
-    - Class: rviz_default_plugins/Map
-      Name: RTABMap
+    - Alpha: 0.7
+      Class: rviz_default_plugins/Map
+      Color Scheme: map
       Enabled: false
+      Name: RTAB Map (/map) — enable after mapping starts
       Topic:
+        Depth: 1
+        Durability Policy: Transient Local
+        History Policy: Keep Last
+        Reliability Policy: Reliable
         Value: /map
-    - Class: rviz_default_plugins/Path
-      Name: PlannedPath
-      Enabled: true
+    - Alpha: 0.6
+      Class: rviz_default_plugins/Map
+      Color Scheme: costmap
+      Enabled: false
+      Name: Gas map (/gas/chemical_map) — enable after TF map ↔ odom
       Topic:
-        Value: /path
+        Depth: 1
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /gas/chemical_map
   Global Options:
-    Fixed Frame: base_link
+    Background Color: 40; 40; 46
+    Fixed Frame: odom
+    Frame Rate: 30
+Tools:
+  - Class: rviz_default_plugins/MoveCamera
+Windows:
+  
