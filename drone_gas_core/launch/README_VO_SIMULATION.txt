@@ -1,26 +1,42 @@
-Visual odometry / SLAM demo checks (ROS 2 Jazzy, after: source install/setup.bash)
+Visual odometry / SLAM demo (ROS 2 Jazzy + Gazebo Harmonic)
 
-1) Launch (exploration OFF by default — only smoke motion should drive /drone/cmd_vel):
-   ros2 launch drone_gas_core full_system.launch.py
+Prerequisites
+-------------
+After build: source install/setup.bash
 
-   Optional: enable wandering explorer (not recommended while tuning VO):
-   ros2 launch drone_gas_core full_system.launch.py enable_exploration:=true
+Odometry tuning is applied via odom_args in drone_gas_core/launch/rtabmap_rgbd.launch.py
+(stock rtabmap.launch.py does not load params_file — see comment in config/rtabmap_params.yaml).
 
-2) Slow open-loop motion (default parameters are conservative):
-   ros2 run drone_gas_core visual_odometry_smoke_motion
+Bring-up (single cmd_vel publisher)
+-----------------------------------
+  ros2 launch drone_gas_core full_system.launch.py
 
-   Optional yaw “scan” after forward motion:
-   ros2 run drone_gas_core visual_odometry_smoke_motion --ros-args -p scan_enabled:=true
+Exploration publishes /drone/cmd_vel too — keep it off for VO tests:
+  # enable_exploration defaults to false
+  ros2 launch drone_gas_core full_system.launch.py enable_exploration:=false
 
-3) Topic rates (sim playing):
-   ros2 topic hz /rgbd_camera/image
-   ros2 topic hz /rgbd_camera/depth_image
-   ros2 topic hz /rgbd_camera/points
-   ros2 topic hz /rtabmap/odom
+Slow motion (+ optional yaw scan after odom_info inliers gate)
+--------------------------------------------------------------
+  ros2 run drone_gas_core visual_odometry_smoke_motion
 
-4) TF sanity (should print a valid transform):
-   ros2 run tf2_ros tf2_echo base_link rgbd_camera
+Optional overrides example:
+  ros2 run drone_gas_core visual_odometry_smoke_motion --ros-args \\
+    -p linear_x:=0.03 -p scan_min_inliers:=15 -p scan_wait_timeout_sec:=30.0
 
-5) If RGB-D messages still show the long Gazebo frame in headers, verify
-   drone_gas_sim_bridge/config/gz_ros_bridge.yaml uses frame_id: rgbd_camera on each
-   bridged sensor entry (matches static TF in full_system.launch.py).
+Topic / TF checks
+-----------------
+  ros2 topic hz /rgbd_camera/image
+  ros2 topic hz /rgbd_camera/depth_image
+  ros2 topic hz /rgbd_camera/points
+  ros2 topic hz /rtabmap/odom
+  ros2 topic echo /rtabmap/odom_info --field inliers
+  ros2 run tf2_ros tf2_echo base_link rgbd_camera
+
+Success criteria (VO / SLAM)
+----------------------------
+• /rtabmap/odom_info inliers climbs and stays largely above ~10–20 once the drone creeps forward.
+• /rtabmap/odom publishes; RTAB GUI / logs show periodic Odom quality > 0, not permanently 0.
+• Log spam “Not enough inliers 0/20” should stop once rgbd_odometry sees Vis/MinInliers via odom_args (not the default 20).
+• RViz: enable Path on /rtabmap/odom (or inspect map/cloud) once TF odom→base_link is live.
+• RGB-D topics must remain: /rgbd_camera/image , /rgbd_camera/depth_image ,
+  /rgbd_camera/camera_info , /rgbd_camera/points (do not rename).

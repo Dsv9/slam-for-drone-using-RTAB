@@ -1,45 +1,48 @@
-rtabmap:
-  ros__parameters:
-    use_sim_time: true
-    frame_id: base_link
-    subscribe_rgb: true
-    subscribe_depth: true
-    approx_sync: true
-    # Per-node names rtabmap_sync reads (avoid leaving topic_queue_size at default 10).
-    topic_queue_size: 50
-    sync_queue_size: 50
-    approx_sync_max_interval: 0.2
-    # ros_gz_bridge uses sensor_data QoS → best effort. RELIABLE (1) often sees no callbacks.
-    # RMW_QOS_POLICY_RELIABILITY_BEST_EFFORT = 2
-    qos_image: 2
-    qos_camera_info: 2
-    RGBD/LinearUpdate: "0.02"
-    RGBD/AngularUpdate: "0.01"
-    Grid/FromDepth: "true"
-    Grid/3D: "false"
+# RTAB-Map parameters for namespaced bringup.
+#
+# IMPORTANT: The stock rtabmap_launch/rtabmap.launch.py (current upstream) does NOT load
+# arbitrary params_file entries; nodes run as /rtabmap/rgbd_odometry and /rtabmap/rtabmap.
+# VO tuning for Gazebo is applied in launch via odom_args (CLI) in rtabmap_rgbd.launch.py.
+# This file is still used if you load parameters manually, or if a future upstream launch
+# merges a ParameterFile for the rtabmap namespace.
 
-rgbd_odometry:
-  ros__parameters:
-    use_sim_time: true
-    frame_id: base_link
-    subscribe_rgb: true
-    subscribe_depth: true
-    approx_sync: true
-    topic_queue_size: 50
-    sync_queue_size: 50
-    approx_sync_max_interval: 0.25
-    qos_image: 2
-    qos_camera_info: 2
-    # Gazebo / plastic textures: maximize features, relax F2M gates (demo-friendly).
-    Vis/MaxFeatures: "5000"
-    Kp/MaxFeatures: "5000"
-    Vis/MinInliers: "6"
-    Vis/InlierDistance: "0.08"
-    Vis/CorNNDR: "0.65"
-    GFTT/MinDistance: "2"
-    Reg/Force3DoF: "true"
-    Odom/ImageDecimation: "1"
-    # F2M local map size / keyframe spacing (helps when frames are similar).
-    OdomF2M/MaxSize: "4000"
-    # Lower minimum keypoints expected in a frame (default behavior uses ~20 in code path).
-    Vis/MinFeatures: "8"
+rtabmap:
+  rgbd_odometry:
+    ros__parameters:
+      use_sim_time: true
+      frame_id: base_link
+      subscribe_rgb: true
+      subscribe_depth: true
+      approx_sync: true
+      topic_queue_size: 50
+      sync_queue_size: 50
+      approx_sync_max_interval: 0.25
+      qos_image: 2
+      qos_camera_info: 2
+      # Gazebo: many matches fail geometry — relax gates (library min for MinInliers is 8).
+      Vis/MinInliers: "10"
+      Vis/MaxFeatures: "5000"
+      Kp/MaxFeatures: "5000"
+      Vis/InlierDistance: "0.22"
+      Vis/CorNNDR: "0.78"
+      Vis/MinFeatures: "8"
+      GFTT/MinDistance: "1"
+      Reg/Force3DoF: "true"
+      Odom/ImageDecimation: "1"
+
+  rtabmap:
+    ros__parameters:
+      use_sim_time: true
+      frame_id: base_link
+      subscribe_rgb: true
+      subscribe_depth: true
+      approx_sync: true
+      topic_queue_size: 50
+      sync_queue_size: 50
+      approx_sync_max_interval: 0.2
+      qos_image: 2
+      qos_camera_info: 2
+      RGBD/LinearUpdate: "0.02"
+      RGBD/AngularUpdate: "0.01"
+      Grid/FromDepth: "true"
+      Grid/3D: "false"

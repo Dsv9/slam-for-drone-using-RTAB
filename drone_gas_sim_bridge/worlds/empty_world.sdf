@@ -210,6 +210,22 @@
       </link>
     </model>
 
+    <!-- Extra close pickets (~1.4 m ahead of south spawn at x≈-1.85): immediate texture at multiple heights. -->
+    <model name="vo_picket_a"><static>true</static><pose>-0.38 -2.15 0.42 0 0 0</pose><link name="link"><collision name="c"><geometry><box><size>0.08 0.08 0.45</size></box></geometry></collision><visual name="v"><geometry><box><size>0.08 0.08 0.45</size></box></geometry><material><ambient>0.02 0.02 0.02 1</ambient><diffuse>0.02 0.02 0.02 1</diffuse></material></visual></link></model>
+    <model name="vo_picket_b"><static>true</static><pose>-0.38 -1.72 0.95 0 0 0</pose><link name="link"><collision name="c"><geometry><box><size>0.08 0.08 0.5</size></box></geometry></collision><visual name="v"><geometry><box><size>0.08 0.08 0.5</size></box></geometry><material><ambient>0.95 0.95 0.95 1</ambient><diffuse>0.95 0.95 0.95 1</diffuse></material></visual></link></model>
+    <model name="vo_picket_c"><static>true</static><pose>-0.38 -1.25 0.55 0 0 0</pose><link name="link"><collision name="c"><geometry><box><size>0.08 0.08 0.4</size></box></geometry></collision><visual name="v"><geometry><box><size>0.08 0.08 0.4</size></box></geometry><material><ambient>0.9 0.2 0.15 1</ambient><diffuse>0.9 0.2 0.15 1</diffuse></material></visual></link></model>
+    <model name="vo_picket_d"><static>true</static><pose>-0.38 -1.25 1.35 0 0 0</pose><link name="link"><collision name="c"><geometry><box><size>0.08 0.08 0.45</size></box></geometry></collision><visual name="v"><geometry><box><size>0.08 0.08 0.45</size></box></geometry><material><ambient>0.15 0.25 0.9 1</ambient><diffuse>0.15 0.25 0.9 1</diffuse></material></visual></link></model>
+    <model name="vo_picket_e"><static>true</static><pose>-0.38 0.95 0.48 0 0 0</pose><link name="link"><collision name="c"><geometry><box><size>0.08 0.08 0.42</size></box></geometry></collision><visual name="v"><geometry><box><size>0.08 0.08 0.42</size></box></geometry><material><ambient>0.2 0.85 0.35 1</ambient><diffuse>0.2 0.85 0.35 1</diffuse></material></visual></link></model>
+    <model name="vo_picket_f"><static>true</static><pose>-0.38 1.45 1.1 0 0 0</pose><link name="link"><collision name="c"><geometry><box><size>0.08 0.08 0.55</size></box></geometry></collision><visual name="v"><geometry><box><size>0.08 0.08 0.55</size></box></geometry><material><ambient>0.85 0.75 0.1 1</ambient><diffuse>0.85 0.75 0.1 1</diffuse></material></visual></link></model>
+
+    <!-- Pseudo–AprilTag board: three nested squares (thin, off-axis for corners). -->
+    <model name="vo_taglike"><static>true</static><pose>-0.25 -0.15 0.88 0 0 0.35</pose><link name="link">
+      <collision name="outer"><geometry><box><size>0.04 0.55 0.55</size></box></geometry></collision>
+      <visual name="outer"><geometry><box><size>0.04 0.55 0.55</size></box></geometry><material><ambient>0.95 0.95 0.95 1</ambient><diffuse>0.95 0.95 0.95 1</diffuse></material></visual>
+      <visual name="mid"><pose>0.015 0 0 0 0 0</pose><geometry><box><size>0.05 0.38 0.38</size></box></geometry><material><ambient>0.08 0.08 0.08 1</ambient><diffuse>0.08 0.08 0.08 1</diffuse></material></visual>
+      <visual name="inner"><pose>0.03 0 0 0 0 0</pose><geometry><box><size>0.06 0.2 0.2</size></box></geometry><material><ambient>0.9 0.15 0.15 1</ambient><diffuse>0.9 0.15 0.15 1</diffuse></material></visual>
+    </link></model>
+
     <!-- Near-field panels (~1.9 m from south-side spawn at x≈-1.8): close ORB texture before the x=0.85 strip wall. -->
     <model name="vo_near_l"><static>true</static><pose>0.05 -1.5 0.95 0 0 1.571</pose>
       <link name="link"><collision name="c"><geometry><box><size>0.10 0.55 1.8</size></box></geometry></collision>
