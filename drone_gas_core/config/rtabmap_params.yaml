@@ -6,8 +6,8 @@ rtabmap:
     subscribe_depth: true
     approx_sync: true
     # Per-node names rtabmap_sync reads (avoid leaving topic_queue_size at default 10).
-    topic_queue_size: 40
-    sync_queue_size: 40
+    topic_queue_size: 50
+    sync_queue_size: 50
     approx_sync_max_interval: 0.2
     # ros_gz_bridge uses sensor_data QoS → best effort. RELIABLE (1) often sees no callbacks.
     # RMW_QOS_POLICY_RELIABILITY_BEST_EFFORT = 2
@@ -25,15 +25,21 @@ rgbd_odometry:
     subscribe_rgb: true
     subscribe_depth: true
     approx_sync: true
-    topic_queue_size: 40
-    sync_queue_size: 40
-    approx_sync_max_interval: 0.2
+    topic_queue_size: 50
+    sync_queue_size: 50
+    approx_sync_max_interval: 0.25
     qos_image: 2
     qos_camera_info: 2
-    # Gazebo sim: weak textures — more ORB features, fewer inliers required, 3DoF motion.
-    Vis/MaxFeatures: "4000"
-    Vis/MinInliers: "8"
-    Vis/InlierDistance: "0.06"
-    GFTT/MinDistance: "3"
+    # Gazebo / plastic textures: maximize features, relax F2M gates (demo-friendly).
+    Vis/MaxFeatures: "5000"
+    Kp/MaxFeatures: "5000"
+    Vis/MinInliers: "6"
+    Vis/InlierDistance: "0.08"
+    Vis/CorNNDR: "0.65"
+    GFTT/MinDistance: "2"
     Reg/Force3DoF: "true"
     Odom/ImageDecimation: "1"
+    # F2M local map size / keyframe spacing (helps when frames are similar).
+    OdomF2M/MaxSize: "4000"
+    # Lower minimum keypoints expected in a frame (default behavior uses ~20 in code path).
+    Vis/MinFeatures: "8"

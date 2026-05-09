@@ -163,9 +163,10 @@
         </visual>
       </link>
     </model>
+    <!-- Was on the default +X path from south spawn — moved out of the VO runway. -->
     <model name="ob_box_c">
       <static>true</static>
-      <pose>0.5 -3.0 0.75 0 0 1.0</pose>
+      <pose>4.2 3.2 0.75 0 0 1.0</pose>
       <link name="link">
         <collision name="c"><geometry><box><size>2.2 0.6 1.5</size></box></geometry></collision>
         <visual name="v">
@@ -209,6 +210,16 @@
       </link>
     </model>
 
+    <!-- Near-field panels (~1.9 m from south-side spawn at x≈-1.8): close ORB texture before the x=0.85 strip wall. -->
+    <model name="vo_near_l"><static>true</static><pose>0.05 -1.5 0.95 0 0 1.571</pose>
+      <link name="link"><collision name="c"><geometry><box><size>0.10 0.55 1.8</size></box></geometry></collision>
+      <visual name="v"><geometry><box><size>0.10 0.55 1.8</size></box></geometry>
+      <material><ambient>0.03 0.03 0.03 1</ambient><diffuse>0.03 0.03 0.03 1</diffuse></material></visual></link></model>
+    <model name="vo_near_r"><static>true</static><pose>0.05 1.5 0.95 0 0 1.571</pose>
+      <link name="link"><collision name="c"><geometry><box><size>0.10 0.4 1.7</size></box></geometry></collision>
+      <visual name="v"><geometry><box><size>0.10 0.4 1.7</size></box></geometry>
+      <material><ambient>0.96 0.92 0.08 1</ambient><diffuse>0.96 0.92 0.08 1</diffuse></material></visual></link></model>
+
     <!-- Vertical VO strips (~2–2.5 m from spawn at x≈-1.2); face +X travel; yaw=90° = board normal to -X. -->
     <model name="vo_strip_y0"><static>true</static><pose>0.85 0 1.05 0 0 1.571</pose>
       <link name="link"><collision name="c"><geometry><box><size>0.12 0.45 2.1</size></box></geometry></collision>
@@ -240,5 +251,23 @@
       <link name="link"><collision name="c"><geometry><box><size>0.12 0.5 1.9</size></box></geometry></collision>
       <visual name="v"><geometry><box><size>0.12 0.5 1.9</size></box></geometry>
       <material><ambient>0.12 0.15 0.92 1</ambient><diffuse>0.12 0.15 0.92 1</diffuse></material></visual></link></model>
+
+    <!-- Dense “checkerboard” in front of south-side spawn (facing +X): multi-scale ORB cues. -->
+    <model name="vo_cell_00"><static>true</static><pose>1.05 -1.8 0.45 0 0 0</pose><link name="link"><collision name="c"><geometry><box><size>0.35 0.35 0.35</size></box></geometry></collision><visual name="v"><geometry><box><size>0.35 0.35 0.35</size></box></geometry><material><ambient>0.02 0.02 0.02 1</ambient><diffuse>0.02 0.02 0.02 1</diffuse></material></visual></link></model>
+    <model name="vo_cell_01"><static>true</static><pose>1.05 -1.35 0.45 0 0 0</pose><link name="link"><collision name="c"><geometry><box><size>0.35 0.35 0.35</size></box></geometry></collision><visual name="v"><geometry><box><size>0.35 0.35 0.35</size></box></geometry><material><ambient>0.95 0.95 0.95 1</ambient><diffuse>0.95 0.95 0.95 1</diffuse></material></visual></link></model>
+    <model name="vo_cell_02"><static>true</static><pose>1.05 -0.9 0.45 0 0 0</pose><link name="link"><collision name="c"><geometry><box><size>0.35 0.35 0.35</size></box></geometry></collision><visual name="v"><geometry><box><size>0.35 0.35 0.35</size></box></geometry><material><ambient>0.02 0.02 0.02 1</ambient><diffuse>0.02 0.02 0.02 1</diffuse></material></visual></link></model>
+    <model name="vo_cell_03"><static>true</static><pose>1.05 -0.45 0.45 0 0 0</pose><link name="link"><collision name="c"><geometry><box><size>0.35 0.35 0.35</size></box></geometry></collision><visual name="v"><geometry><box><size>0.35 0.35 0.35</size></box></geometry><material><ambient>0.95 0.95 0.95 1</ambient><diffuse>0.95 0.95 0.95 1</diffuse></material></visual></link></model>
+    <model name="vo_cell_04"><static>true</static><pose>1.05 0 0.45 0 0 0</pose><link name="link"><collision name="c"><geometry><box><size>0.35 0.35 0.35</size></box></geometry></collision><visual name="v"><geometry><box><size>0.35 0.35 0.35</size></box></geometry><material><ambient>0.02 0.02 0.02 1</ambient><diffuse>0.02 0.02 0.02 1</diffuse></material></visual></link></model>
+    <model name="vo_cell_05"><static>true</static><pose>1.05 0.45 0.45 0 0 0</pose><link name="link"><collision name="c"><geometry><box><size>0.35 0.35 0.35</size></box></geometry></collision><visual name="v"><geometry><box><size>0.35 0.35 0.35</size></box></geometry><material><ambient>0.95 0.95 0.95 1</ambient><diffuse>0.95 0.95 0.95 1</diffuse></material></visual></link></model>
+    <model name="vo_cell_06"><static>true</static><pose>1.05 0.9 0.45 0 0 0</pose><link name="link"><collision name="c"><geometry><box><size>0.35 0.35 0.35</size></box></geometry></collision><visual name="v"><geometry><box><size>0.35 0.35 0.35</size></box></geometry><material><ambient>0.02 0.02 0.02 1</ambient><diffuse>0.02 0.02 0.02 1</diffuse></material></visual></link></model>
+    <model name="vo_cell_07"><static>true</static><pose>1.05 1.35 0.45 0 0 0</pose><link name="link"><collision name="c"><geometry><box><size>0.35 0.35 0.35</size></box></geometry></collision><visual name="v"><geometry><box><size>0.35 0.35 0.35</size></box></geometry><material><ambient>0.95 0.95 0.95 1</ambient><diffuse>0.95 0.95 0.95 1</diffuse></material></visual></link></model>
+    <model name="vo_cell_10"><static>true</static><pose>1.05 -1.62 1.05 0 0 0</pose><link name="link"><collision name="c"><geometry><box><size>0.35 0.35 0.35</size></box></geometry></collision><visual name="v"><geometry><box><size>0.35 0.35 0.35</size></box></geometry><material><ambient>0.85 0.12 0.12 1</ambient><diffuse>0.85 0.12 0.12 1</diffuse></material></visual></link></model>
+    <model name="vo_cell_11"><static>true</static><pose>1.05 -0.72 1.05 0 0 0</pose><link name="link"><collision name="c"><geometry><box><size>0.35 0.35 0.35</size></box></geometry></collision><visual name="v"><geometry><box><size>0.35 0.35 0.35</size></box></geometry><material><ambient>0.12 0.75 0.22 1</ambient><diffuse>0.12 0.75 0.22 1</diffuse></material></visual></link></model>
+    <model name="vo_cell_12"><static>true</static><pose>1.05 0.18 1.05 0 0 0</pose><link name="link"><collision name="c"><geometry><box><size>0.35 0.35 0.35</size></box></geometry></collision><visual name="v"><geometry><box><size>0.35 0.35 0.35</size></box></geometry><material><ambient>0.15 0.2 0.9 1</ambient><diffuse>0.15 0.2 0.9 1</diffuse></material></visual></link></model>
+    <model name="vo_cell_13"><static>true</static><pose>1.05 1.08 1.05 0 0 0</pose><link name="link"><collision name="c"><geometry><box><size>0.35 0.35 0.35</size></box></geometry></collision><visual name="v"><geometry><box><size>0.35 0.35 0.35</size></box></geometry><material><ambient>0.9 0.75 0.1 1</ambient><diffuse>0.9 0.75 0.1 1</diffuse></material></visual></link></model>
+    <model name="vo_cell_20"><static>true</static><pose>1.55 -1.35 0.75 0 0 0</pose><link name="link"><collision name="c"><geometry><box><size>0.4 0.4 0.15</size></box></geometry></collision><visual name="v"><geometry><box><size>0.4 0.4 0.15</size></box></geometry><material><ambient>0.9 0.5 0.1 1</ambient><diffuse>0.9 0.5 0.1 1</diffuse></material></visual></link></model>
+    <model name="vo_cell_21"><static>true</static><pose>1.55 0.35 0.75 0 0 0</pose><link name="link"><collision name="c"><geometry><box><size>0.4 0.4 0.15</size></box></geometry></collision><visual name="v"><geometry><box><size>0.4 0.4 0.15</size></box></geometry><material><ambient>0.2 0.85 0.65 1</ambient><diffuse>0.2 0.85 0.65 1</diffuse></material></visual></link></model>
+    <model name="vo_cell_22"><static>true</static><pose>1.55 -0.5 1.45 0 0 0</pose><link name="link"><collision name="c"><geometry><box><size>0.4 0.4 0.15</size></box></geometry></collision><visual name="v"><geometry><box><size>0.4 0.4 0.15</size></box></geometry><material><ambient>0.85 0.2 0.75 1</ambient><diffuse>0.85 0.2 0.75 1</diffuse></material></visual></link></model>
+    <model name="vo_cell_23"><static>true</static><pose>1.55 0.9 1.45 0 0 0</pose><link name="link"><collision name="c"><geometry><box><size>0.4 0.4 0.15</size></box></geometry></collision><visual name="v"><geometry><box><size>0.4 0.4 0.15</size></box></geometry><material><ambient>0.25 0.3 0.35 1</ambient><diffuse>0.25 0.3 0.35 1</diffuse></material></visual></link></model>
   </world>
 </sdf>

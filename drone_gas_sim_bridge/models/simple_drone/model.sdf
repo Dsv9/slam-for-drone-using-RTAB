@@ -95,8 +95,8 @@
         Match base_link -> rgbd_camera static TF in full_system.launch.py to this pose.
       -->
       <sensor name="rgbd_camera" type="rgbd_camera">
-        <!-- r p y: small negative pitch looks slightly down (floor checker + mid-range cues). -->
-        <pose>0.30 0 0.055 0 -0.14 0</pose>
+        <!-- r p y: gentle pitch — avoid ceiling-only or floor-only view when near walls. -->
+        <pose>0.30 0 0.055 0 -0.10 0</pose>
         <camera>
           <horizontal_fov>1.0472</horizontal_fov>
           <image>
@@ -111,7 +111,7 @@
         </camera>
         <always_on>true</always_on>
         <!-- Slightly lower rate helps VO keep up in sim (still bridged at usable Hz). -->
-        <update_rate>12</update_rate>
+        <update_rate>10</update_rate>
         <visualize>false</visualize>
         <topic>rgbd_camera</topic>
         <enable_metrics>true</enable_metrics>

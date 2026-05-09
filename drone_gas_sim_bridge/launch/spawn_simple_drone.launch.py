@@ -20,8 +20,8 @@ def generate_launch_description():
         launch_arguments={"gz_args": f"-r {world_path}"}.items(),
     )
 
-    # Open floor near room center; +X path must stay clear of partition_short (see world SDF).
-    # Nose to +X looks toward the VO feature strips (~2–3 m ahead).
+    # South-open cell: far from north/south walls, clear +X runway (see empty_world obstacle layout).
+    # Body Z keeps hull + mast under ceiling; camera pitched slightly down in model.sdf.
     spawn_drone = Node(
         package="ros_gz_sim",
         executable="create",
@@ -33,11 +33,11 @@ def generate_launch_description():
             "-file",
             model_path,
             "-x",
-            "-1.2",
+            "-1.8",
             "-y",
-            "0",
+            "-3.75",
             "-z",
-            "0.64",
+            "0.90",
             "-Y",
             "0",
         ],

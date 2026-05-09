@@ -13,6 +13,7 @@ def generate_launch_description():
     pkg_sim_bridge = get_package_share_directory("drone_gas_sim_bridge")
     start_bridge = LaunchConfiguration("start_bridge")
     gazebo_twist_topic = LaunchConfiguration("gazebo_twist_topic")
+    enable_exploration = LaunchConfiguration("enable_exploration")
     return LaunchDescription(
         [
             # Frame chain for simulation SLAM:
@@ -26,6 +27,8 @@ def generate_launch_description():
             # being published/initialized. Using map too early causes filter drops.
             DeclareLaunchArgument("start_bridge", default_value="true"),
             DeclareLaunchArgument("gazebo_twist_topic", default_value="/cmd_vel"),
+            # Exploration fights VO smoke tests — enable only for full demo.
+            DeclareLaunchArgument("enable_exploration", default_value="false"),
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(
                     os.path.join(
@@ -67,7 +70,7 @@ def generate_launch_description():
                     "0",
                     "0.055",
                     "0",
-                    "-0.14",
+                    "-0.10",
                     "0",
                     "base_link",
                     "rgbd_camera",
@@ -116,6 +119,7 @@ def generate_launch_description():
                 executable="exploration_controller_node",
                 name="exploration_controller_node",
                 output="screen",
+                condition=IfCondition(enable_exploration),
                 parameters=[
                     os.path.join(pkg_core, "config", "exploration_controller.yaml"),
                     {"use_sim_time": True},
@@ -132,6 +136,7 @@ def generate_launch_description():
                         # Allow slow open-loop motion before rgbd_odometry publishes valid odom
                         # (exploration + smoke tests). Set true for hardware safety if repurpose.
                         "require_odom": False,
+                        "debug_print_cmd_vel": False,
                         "use_sim_time": True,
                     },
                 ],
