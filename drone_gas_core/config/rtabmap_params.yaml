@@ -1,10 +1,7 @@
-# RTAB-Map parameters for namespaced bringup.
+# Namespaced mirrors of rgbd_odometry tuning (manual load / tooling only).
 #
-# IMPORTANT: The stock rtabmap_launch/rtabmap.launch.py (current upstream) does NOT load
-# arbitrary params_file entries; nodes run as /rtabmap/rgbd_odometry and /rtabmap/rtabmap.
-# VO tuning for Gazebo is applied in launch via odom_args (CLI) in rtabmap_rgbd.launch.py.
-# This file is still used if you load parameters manually, or if a future upstream launch
-# merges a ParameterFile for the rtabmap namespace.
+# VO tuning for sim is authoritative in launch/rtabmap_rgbd.launch.py (odom_args).
+# Comments there explain EstimationType=0 vs PnP (type=1).
 
 rtabmap:
   rgbd_odometry:
@@ -16,16 +13,21 @@ rtabmap:
       approx_sync: true
       topic_queue_size: 50
       sync_queue_size: 50
-      approx_sync_max_interval: 0.25
+      approx_sync_max_interval: 0.35
       qos_image: 2
       qos_camera_info: 2
-      # Gazebo: many matches fail geometry — relax gates (library min for MinInliers is 8).
-      Vis/MinInliers: "10"
-      Vis/MaxFeatures: "5000"
-      Kp/MaxFeatures: "5000"
-      Vis/InlierDistance: "0.22"
-      Vis/CorNNDR: "0.78"
-      Vis/MinFeatures: "8"
+      Vis/EstimationType: "0"
+      Vis/MinInliers: "8"
+      Vis/MaxFeatures: "8000"
+      Kp/MaxFeatures: "8000"
+      Vis/InlierDistance: "0.45"
+      Vis/PnPReprojError: "10"
+      Vis/CorNNDR: "0.82"
+      Vis/MinDepth: "0.25"
+      Vis/MaxDepth: "8"
+      Kp/MinDepth: "0.2"
+      Kp/MaxDepth: "8"
+      Vis/MinFeatures: "6"
       GFTT/MinDistance: "1"
       Reg/Force3DoF: "true"
       Odom/ImageDecimation: "1"
@@ -39,7 +41,7 @@ rtabmap:
       approx_sync: true
       topic_queue_size: 50
       sync_queue_size: 50
-      approx_sync_max_interval: 0.2
+      approx_sync_max_interval: 0.35
       qos_image: 2
       qos_camera_info: 2
       RGBD/LinearUpdate: "0.02"

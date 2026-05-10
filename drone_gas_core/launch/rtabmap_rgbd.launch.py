@@ -6,16 +6,24 @@ from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 
-# Passed to rgbd_odometry argv (always applied — stock rtabmap.launch.py ignores params_file).
-# Matches=7 / inliers=0 often clears up once Vis/MinInliers is not the default 20 and
-# Vis/InlierDistance tolerates noisy Gazebo depth/projection.
+# Passed to rgbd_odometry argv (stock rtabmap.launch.py ignores arbitrary params_file).
+#
+# IMPORTANT: RTAB‘s default Vis/EstimationType=1 uses 3D→2D (PnP); Vis/InlierDistance is
+# only used for EstimationType=0 (3D→3D). For Gazebo RGB-D noise, switching to type 0 and
+# raising the 3D correspondence distance avoids “matches>0 but 0 geometric inliers” traps.
 _DEMO_ODOM_ARGS = (
-    "--Vis/MinInliers 10 "
-    "--Vis/MaxFeatures 5000 "
-    "--Kp/MaxFeatures 5000 "
-    "--Vis/MinFeatures 8 "
-    "--Vis/InlierDistance 0.22 "
-    "--Vis/CorNNDR 0.78 "
+    "--Vis/EstimationType 0 "
+    "--Vis/MinInliers 8 "
+    "--Vis/MaxFeatures 8000 "
+    "--Kp/MaxFeatures 8000 "
+    "--Vis/MinFeatures 6 "
+    "--Vis/InlierDistance 0.45 "
+    "--Vis/PnPReprojError 10 "
+    "--Vis/CorNNDR 0.82 "
+    "--Vis/MinDepth 0.25 "
+    "--Vis/MaxDepth 8 "
+    "--Kp/MinDepth 0.2 "
+    "--Kp/MaxDepth 8 "
     "--GFTT/MinDistance 1 "
     "--Reg/Force3DoF true "
     "--Odom/ImageDecimation 1"
@@ -46,7 +54,9 @@ def generate_launch_description():
                     "queue_size": "50",
                     "topic_queue_size": "50",
                     "sync_queue_size": "50",
-                    "approx_sync_max_interval": "0.25",
+                    # Looser sync reduces dropped pairs when Gazebo stamps wobble slightly.
+                    "approx_sync_max_interval": "0.35",
+                    "depth_scale": "1.0",
                     "rgb_topic": LaunchConfiguration("rgb_topic"),
                     "depth_topic": LaunchConfiguration("depth_topic"),
                     "camera_info_topic": LaunchConfiguration("camera_info_topic"),

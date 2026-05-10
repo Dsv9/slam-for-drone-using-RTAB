@@ -95,8 +95,8 @@
         Match base_link -> rgbd_camera static TF in full_system.launch.py to this pose.
       -->
       <sensor name="rgbd_camera" type="rgbd_camera">
-        <!-- r p y: slight pitch down — keep horizon on wall features, not only floor tiles. -->
-        <pose>0.30 0 0.055 0 -0.06 0</pose>
+        <!-- r p y: small pitch toward mid-field 3D props (walls stay in upper image). -->
+        <pose>0.30 0 0.055 0 -0.05 0</pose>
         <camera>
           <horizontal_fov>1.0472</horizontal_fov>
           <image>

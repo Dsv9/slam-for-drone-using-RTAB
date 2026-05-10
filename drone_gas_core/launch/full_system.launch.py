@@ -70,7 +70,7 @@ def generate_launch_description():
                     "0",
                     "0.055",
                     "0",
-                    "-0.06",
+                    "-0.05",
                     "0",
                     "base_link",
                     "rgbd_camera",

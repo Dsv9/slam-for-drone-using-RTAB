@@ -218,6 +218,11 @@
     <model name="vo_picket_e"><static>true</static><pose>-0.38 0.95 0.48 0 0 0</pose><link name="link"><collision name="c"><geometry><box><size>0.08 0.08 0.42</size></box></geometry></collision><visual name="v"><geometry><box><size>0.08 0.08 0.42</size></box></geometry><material><ambient>0.2 0.85 0.35 1</ambient><diffuse>0.2 0.85 0.35 1</diffuse></material></visual></link></model>
     <model name="vo_picket_f"><static>true</static><pose>-0.38 1.45 1.1 0 0 0</pose><link name="link"><collision name="c"><geometry><box><size>0.08 0.08 0.55</size></box></geometry></collision><visual name="v"><geometry><box><size>0.08 0.08 0.55</size></box></geometry><material><ambient>0.85 0.75 0.1 1</ambient><diffuse>0.85 0.75 0.1 1</diffuse></material></visual></link></model>
 
+    <!-- Low heap of misaligned solids (different sizes/depths) — breaks single-plane boredom. -->
+    <model name="vo_heap_o"><static>true</static><pose>-0.52 -3.05 0.38 0.15 0 0.2</pose><link name="link"><collision name="c"><geometry><box><size>0.28 0.22 0.52</size></box></geometry></collision><visual name="v"><geometry><box><size>0.28 0.22 0.52</size></box></geometry><material><ambient>0.82 0.14 0.65 1</ambient><diffuse>0.82 0.14 0.65 1</diffuse></material></visual></link></model>
+    <model name="vo_heap_y"><static>true</static><pose>-0.38 -3.52 0.76 0 0 -0.4</pose><link name="link"><collision name="c"><geometry><box><size>0.22 0.42 0.38</size></box></geometry></collision><visual name="v"><geometry><box><size>0.22 0.42 0.38</size></box></geometry><material><ambient>0.95 0.82 0.05 1</ambient><diffuse>0.95 0.82 0.05 1</diffuse></material></visual></link></model>
+    <model name="vo_heap_c"><static>true</static><pose>-0.22 -3.82 1.02 0.12 0.08 0.55</pose><link name="link"><collision name="c"><geometry><box><size>0.18 0.18 1.05</size></box></geometry></collision><visual name="v"><geometry><box><size>0.18 0.18 1.05</size></box></geometry><material><ambient>0.1 0.55 0.88 1</ambient><diffuse>0.1 0.55 0.88 1</diffuse></material></visual></link></model>
+
     <!-- Pseudo–AprilTag board: three nested squares (thin, off-axis for corners). -->
     <model name="vo_taglike"><static>true</static><pose>-0.25 -0.15 0.88 0 0 0.35</pose><link name="link">
       <collision name="outer"><geometry><box><size>0.04 0.55 0.55</size></box></geometry></collision>

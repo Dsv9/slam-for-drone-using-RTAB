@@ -4,8 +4,19 @@ Prerequisites
 -------------
 After build: source install/setup.bash
 
-Odometry tuning is applied via odom_args in drone_gas_core/launch/rtabmap_rgbd.launch.py
-(stock rtabmap.launch.py does not load params_file — see comment in config/rtabmap_params.yaml).
+Odometry tuning is applied via odom_args in drone_gas_core/launch/rtabmap_rgbd.launch.py.
+
+If you still see matches but geometric inliers stay at 0, check rgbd_odometry was launched
+with Vis/EstimationType=0 (3D→3D). RTAB‘s default EstimationType=1 is PnP; Vis/InlierDistance
+mostly affects type 0, so tuning InlierDistance alone while type=1 is still PnP can look like
+“nothing changes.”
+
+(stock rtabmap.launch.py does not honor an arbitrary YAML params_file for these nodes.)
+
+Mapping vs odometry order
+-------------------------
+RTAB-Map discards images until /rtabmap/odom is valid (quality > 0). There is nothing extra to
+delay in launch: fixing rgbd_odometry fixes mapping automatically.
 
 Bring-up (single cmd_vel publisher)
 -----------------------------------
