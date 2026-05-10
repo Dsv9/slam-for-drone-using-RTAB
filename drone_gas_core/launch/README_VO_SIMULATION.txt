@@ -51,3 +51,30 @@ Success criteria (VO / SLAM)
 • RViz: enable Path on /rtabmap/odom (or inspect map/cloud) once TF odom→base_link is live.
 • RGB-D topics must remain: /rgbd_camera/image , /rgbd_camera/depth_image ,
   /rgbd_camera/camera_info , /rgbd_camera/points (do not rename).
+
+Optional 2D depth avoidance (demo only)
+---------------------------------------
+Rebuild and source workspace as usual, then launch with avoidance on:
+
+  colcon build --packages-select drone_gas_core
+  source install/setup.bash
+  ros2 launch drone_gas_core full_system.launch.py enable_avoidance:=true enable_exploration:=false
+
+Checks:
+  ros2 topic echo /drone/cmd_vel           # Twist from simple_depth_avoidance_node → watchdog → bridge
+  ros2 topic hz /drone/cmd_vel
+
+Rules:
+• Do NOT run visual_odometry_smoke_motion.py at the same time (two publishers on /drone/cmd_vel).
+• Exploration is suppressed automatically whenever enable_avoidance:=true, even if
+  enable_exploration:=true, so avoidance wins for a single-driver demo.
+
+Tune (optional ros2 params on simple_depth_avoidance_node): safe_distance_m, forward_speed_m_s,
+turn_speed_rad_s, roi_* fractions for front window.
+
+Suggested demo storyline (gas + SLAM robot)
+------------------------------------------
+1) Simulation + RViz showing map growth from RGB-D SLAM (/rtabmap/odom, map/grid if enabled).
+2) Gas sensor overlay (existing gas_sim + chemical_mapper) as a “risk map” or markers in RViz.
+3) Optionally enable enable_avoidance:=true so the robot creeps forward and turns away from
+   depth obstacles—still Nav2‑free and appropriate for fixed-height tabletop/hall demos.

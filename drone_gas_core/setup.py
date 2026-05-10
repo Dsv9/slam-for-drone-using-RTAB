@@ -29,6 +29,7 @@ setup(
             "exploration_controller_node = drone_gas_core.exploration_controller_node:main",
             "cmd_vel_watchdog_node = drone_gas_core.cmd_vel_watchdog_node:main",
             "visual_odometry_smoke_motion = drone_gas_core.visual_odometry_smoke_motion:main",
+            "simple_depth_avoidance_node = drone_gas_core.simple_depth_avoidance_node:main",
         ],
     },
 )

@@ -2,7 +2,7 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration
+from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch_ros.actions import Node
 from ament_index_python.packages import get_package_share_directory
 import os
@@ -14,6 +14,7 @@ def generate_launch_description():
     start_bridge = LaunchConfiguration("start_bridge")
     gazebo_twist_topic = LaunchConfiguration("gazebo_twist_topic")
     enable_exploration = LaunchConfiguration("enable_exploration")
+    enable_avoidance = LaunchConfiguration("enable_avoidance")
     return LaunchDescription(
         [
             # Frame chain for simulation SLAM:
@@ -29,6 +30,9 @@ def generate_launch_description():
             DeclareLaunchArgument("gazebo_twist_topic", default_value="/cmd_vel"),
             # Exploration fights VO smoke tests — enable only for full demo.
             DeclareLaunchArgument("enable_exploration", default_value="false"),
+            # Optional depth-based creep + turn-away (see simple_depth_avoidance_node.py).
+            # When true: exploration_controller is OFF unless you bypass this expression.
+            DeclareLaunchArgument("enable_avoidance", default_value="false"),
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(
                     os.path.join(
@@ -119,10 +123,38 @@ def generate_launch_description():
                 executable="exploration_controller_node",
                 name="exploration_controller_node",
                 output="screen",
-                condition=IfCondition(enable_exploration),
+                condition=IfCondition(
+                    PythonExpression(
+                        [
+                            "'",
+                            LaunchConfiguration("enable_exploration"),
+                            "' == 'true' and '",
+                            LaunchConfiguration("enable_avoidance"),
+                            "' != 'true'",
+                        ]
+                    )
+                ),
                 parameters=[
                     os.path.join(pkg_core, "config", "exploration_controller.yaml"),
                     {"use_sim_time": True},
+                ],
+            ),
+            Node(
+                package="drone_gas_core",
+                executable="simple_depth_avoidance_node",
+                name="simple_depth_avoidance_node",
+                output="screen",
+                condition=IfCondition(enable_avoidance),
+                parameters=[
+                    {
+                        "depth_topic": "/rgbd_camera/depth_image",
+                        "cmd_vel_topic": "/drone/cmd_vel",
+                        "safe_distance_m": 0.7,
+                        "forward_speed_m_s": 0.04,
+                        "turn_speed_rad_s": 0.25,
+                        "publish_hz": 10.0,
+                        "use_sim_time": True,
+                    }
                 ],
             ),
             Node(
