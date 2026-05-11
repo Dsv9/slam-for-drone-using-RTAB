@@ -46,6 +46,20 @@ def generate_launch_description():
             DeclareLaunchArgument("no_reading_forward_m_s", default_value="0.015"),
             DeclareLaunchArgument("debug_avoidance", default_value="false"),
             DeclareLaunchArgument("debug_avoidance_period_sec", default_value="1.0"),
+            # --- escape + side ROI (simple_depth_avoidance_node) ---
+            DeclareLaunchArgument("stuck_timeout_sec", default_value="4.0"),
+            DeclareLaunchArgument("reverse_speed_m_s", default_value="-0.02"),
+            DeclareLaunchArgument("reverse_duration_sec", default_value="1.0"),
+            DeclareLaunchArgument("escape_turn_duration_sec", default_value="2.0"),
+            DeclareLaunchArgument("alternate_turn_direction", default_value="true"),
+            DeclareLaunchArgument("side_roi_enabled", default_value="true"),
+            DeclareLaunchArgument("side_roi_col_left_min", default_value="0.08"),
+            DeclareLaunchArgument("side_roi_col_left_max", default_value="0.38"),
+            DeclareLaunchArgument("side_roi_col_right_min", default_value="0.62"),
+            DeclareLaunchArgument("side_roi_col_right_max", default_value="0.92"),
+            DeclareLaunchArgument("side_depth_clear_margin_m", default_value="0.10"),
+            DeclareLaunchArgument("stuck_vx_threshold_m_s", default_value="0.022"),
+            DeclareLaunchArgument("stuck_wz_threshold_rad_s", default_value="0.10"),
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(
                     os.path.join(
@@ -177,6 +191,27 @@ def generate_launch_description():
                         "debug_avoidance": LaunchConfiguration("debug_avoidance"),
                         "debug_avoidance_period_sec": LaunchConfiguration(
                             "debug_avoidance_period_sec"
+                        ),
+                        "stuck_timeout_sec": LaunchConfiguration("stuck_timeout_sec"),
+                        "reverse_speed_m_s": LaunchConfiguration("reverse_speed_m_s"),
+                        "reverse_duration_sec": LaunchConfiguration("reverse_duration_sec"),
+                        "escape_turn_duration_sec": LaunchConfiguration(
+                            "escape_turn_duration_sec"
+                        ),
+                        "alternate_turn_direction": LaunchConfiguration(
+                            "alternate_turn_direction"
+                        ),
+                        "side_roi_enabled": LaunchConfiguration("side_roi_enabled"),
+                        "side_roi_col_left_min": LaunchConfiguration("side_roi_col_left_min"),
+                        "side_roi_col_left_max": LaunchConfiguration("side_roi_col_left_max"),
+                        "side_roi_col_right_min": LaunchConfiguration("side_roi_col_right_min"),
+                        "side_roi_col_right_max": LaunchConfiguration("side_roi_col_right_max"),
+                        "side_depth_clear_margin_m": LaunchConfiguration(
+                            "side_depth_clear_margin_m"
+                        ),
+                        "stuck_vx_threshold_m_s": LaunchConfiguration("stuck_vx_threshold_m_s"),
+                        "stuck_wz_threshold_rad_s": LaunchConfiguration(
+                            "stuck_wz_threshold_rad_s"
                         ),
                         "use_sim_time": True,
                     }

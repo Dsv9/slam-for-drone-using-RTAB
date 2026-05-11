@@ -78,6 +78,12 @@ Rules:
 Tune (optional ros2 params on simple_depth_avoidance_node): safe_distance_m, forward_speed_m_s,
 turn_speed_rad_s, roi_* fractions for front window.
 
+Escape from clutter (same launch file): stuck_timeout_sec, reverse_speed_m_s,
+reverse_duration_sec, escape_turn_duration_sec, alternate_turn_direction, side_roi_enabled,
+side_roi_col_* , side_depth_clear_margin_m, stuck_vx_threshold_m_s, stuck_wz_threshold_rad_s.
+With debug_avoidance:=true, logs show action, d_front_min, d_left_med, d_right_med, vx, wz,
+stuck_timer, and escape phase name.
+
 Suggested demo storyline (gas + SLAM robot)
 ------------------------------------------
 1) Simulation + RViz showing map growth from RGB-D SLAM (/rtabmap/odom, map/grid if enabled).
