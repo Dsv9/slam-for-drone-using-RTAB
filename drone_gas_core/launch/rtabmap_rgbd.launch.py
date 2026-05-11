@@ -17,7 +17,7 @@ _DEMO_ODOM_ARGS = (
     "--Vis/MaxFeatures 8000 "
     "--Kp/MaxFeatures 8000 "
     "--Vis/MinFeatures 6 "
-    "--Vis/InlierDistance 0.45 "
+    "--Vis/InlierDistance 0.52 "
     "--Vis/PnPReprojError 10 "
     "--Vis/CorNNDR 0.82 "
     "--Vis/MinDepth 0.25 "

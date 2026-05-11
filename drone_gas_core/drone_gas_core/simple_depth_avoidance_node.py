@@ -5,10 +5,17 @@ Reads /rgbd_camera/depth_image and publishes geometry_msgs/Twist on /drone/cmd_v
 Intended demo: fixed-height “ground robot” behavior (linear.x + angular.z only).
 
 Do not run this together with exploration_controller_node or visual_odometry_smoke_motion —
-only one publisher should drive /drone/cmd_vel."""
+only one publisher should drive /drone/cmd_vel.
+
+Why the robot can “just revolve”: the controller publishes angular.z when (a) the ROI has
+no valid depth pixels (NaN/inf/out of range), or (b) the nearest valid depth in the ROI is
+<= safe_distance_m (obstacle / wall / floor too close in that window). Tune safe_distance_m,
+ROI fractions, and max_range_m from launch until forward clears the threshold.
+"""
 from __future__ import annotations
 
-from typing import Optional
+import time
+from typing import Optional, Tuple
 
 import numpy as np
 import rclpy
@@ -43,20 +50,48 @@ def _decode_depth(msg: Image) -> Optional[np.ndarray]:
     return None
 
 
+def _row_col_fracs(node: Node) -> Tuple[float, float, float, float]:
+    """ROI as fractions of image height/width [0,1]. Legacy start/end override min/max if set."""
+    rmin = float(node.get_parameter("roi_row_frac_min").value)
+    rmax = float(node.get_parameter("roi_row_frac_max").value)
+    cmin = float(node.get_parameter("roi_col_frac_min").value)
+    cmax = float(node.get_parameter("roi_col_frac_max").value)
+    rs = float(node.get_parameter("roi_row_frac_start").value)
+    re = float(node.get_parameter("roi_row_frac_end").value)
+    cs = float(node.get_parameter("roi_col_frac_start").value)
+    ce = float(node.get_parameter("roi_col_frac_end").value)
+    # Legacy: if start/end differ from sentinels -1, use them (launch can omit min/max).
+    if rs >= 0.0 and re >= 0.0:
+        rmin, rmax = rs, re
+    if cs >= 0.0 and ce >= 0.0:
+        cmin, cmax = cs, ce
+    return rmin, rmax, cmin, cmax
+
+
 class SimpleDepthAvoidanceNode(Node):
     def __init__(self) -> None:
         super().__init__("simple_depth_avoidance")
         self.declare_parameter("depth_topic", "/rgbd_camera/depth_image")
         self.declare_parameter("cmd_vel_topic", "/drone/cmd_vel")
         self.declare_parameter("publish_hz", 10.0)
-        self.declare_parameter("safe_distance_m", 0.7)
+        self.declare_parameter("safe_distance_m", 0.45)
         self.declare_parameter("max_range_m", 8.0)
         self.declare_parameter("forward_speed_m_s", 0.04)
         self.declare_parameter("turn_speed_rad_s", 0.25)
-        self.declare_parameter("roi_row_frac_start", 0.25)
-        self.declare_parameter("roi_row_frac_end", 0.65)
-        self.declare_parameter("roi_col_frac_start", 0.40)
-        self.declare_parameter("roi_col_frac_end", 0.60)
+        # Preferred names (launch): frontal band in image fractions.
+        self.declare_parameter("roi_row_frac_min", 0.22)
+        self.declare_parameter("roi_row_frac_max", 0.50)
+        self.declare_parameter("roi_col_frac_min", 0.43)
+        self.declare_parameter("roi_col_frac_max", 0.57)
+        # Legacy aliases (set to -1 to use min/max only).
+        self.declare_parameter("roi_row_frac_start", -1.0)
+        self.declare_parameter("roi_row_frac_end", -1.0)
+        self.declare_parameter("roi_col_frac_start", -1.0)
+        self.declare_parameter("roi_col_frac_end", -1.0)
+        self.declare_parameter("debug_avoidance", False)
+        self.declare_parameter("debug_avoidance_period_sec", 1.0)
+        # When ROI has no valid depth, creep forward this much (m/s) while turning slowly.
+        self.declare_parameter("no_reading_forward_m_s", 0.015)
 
         qos_depth = QoSProfile(
             depth=5,
@@ -74,8 +109,8 @@ class SimpleDepthAvoidanceNode(Node):
         self.create_timer(1.0 / hz, self._tick)
 
         self._last_depth: Optional[np.ndarray] = None
-        self._last_stamp = None
         self._warn_no_depth = False
+        self._dbg_last_t = 0.0
 
     def _depth_cb(self, msg: Image) -> None:
         d = _decode_depth(msg)
@@ -88,51 +123,77 @@ class SimpleDepthAvoidanceNode(Node):
         vmax = float(self.get_parameter("max_range_m").value)
         v_fwd = float(self.get_parameter("forward_speed_m_s").value)
         w_turn = float(self.get_parameter("turn_speed_rad_s").value)
-        rs, re = float(self.get_parameter("roi_row_frac_start").value), float(
-            self.get_parameter("roi_row_frac_end").value
+        rs, re, cs, ce = _row_col_fracs(self)
+        dbg_raw = self.get_parameter("debug_avoidance").value
+        dbg = (
+            dbg_raw
+            if isinstance(dbg_raw, bool)
+            else str(dbg_raw).lower() in ("true", "1", "yes")
         )
-        cs, ce = float(self.get_parameter("roi_col_frac_start").value), float(
-            self.get_parameter("roi_col_frac_end").value
-        )
+        dbg_period = max(float(self.get_parameter("debug_avoidance_period_sec").value), 0.25)
+        v_no_read = max(float(self.get_parameter("no_reading_forward_m_s").value), 0.0)
 
         twist = Twist()
-        if d is None:
-            if not self._warn_no_depth:
-                self._warn_no_depth = True
-                self.get_logger().warn("No depth decoded yet (%s)." % self._topic)
-            self._pub.publish(twist)
-            return
-
-        h, w = d.shape[:2]
-        r0 = int(max(0.0, min(rs, re)) * h)
-        r1 = int(max(0.0, max(rs, re)) * h)
-        c0 = int(max(0.0, min(cs, ce)) * w)
-        c1 = int(max(0.0, max(cs, ce)) * w)
-        r1 = max(r1, r0 + 1)
-        c1 = max(c1, c0 + 1)
-
-        roi = d[r0:r1, c0:c1]
-        valid = np.isfinite(roi) & (roi > 1e-3) & (roi < vmax)
-
         twist.linear.z = 0.0
         twist.linear.y = 0.0
         twist.angular.x = 0.0
         twist.angular.y = 0.0
 
-        if not np.any(valid):
-            # No trustworthy reading in front cone — creep turn in place slowly.
-            twist.angular.z = w_turn * 0.6
-            self._pub.publish(twist)
-            return
+        action = "idle"
+        dm = float("nan")
+        n_valid = 0
 
-        dm = roi[valid].min()
-        if dm > safe:
-            twist.linear.x = v_fwd
-            twist.angular.z = 0.0
+        if d is None:
+            if not self._warn_no_depth:
+                self._warn_no_depth = True
+                self.get_logger().warn("No depth decoded yet (%s)." % self._topic)
+            self._pub.publish(twist)
+            action = "no_frame"
         else:
-            twist.linear.x = 0.0
-            twist.angular.z = w_turn
-        self._pub.publish(twist)
+            h, w = d.shape[:2]
+            r0 = int(max(0.0, min(rs, re)) * h)
+            r1 = int(max(0.0, max(rs, re)) * h)
+            c0 = int(max(0.0, min(cs, ce)) * w)
+            c1 = int(max(0.0, max(cs, ce)) * w)
+            r1 = max(r1, r0 + 1)
+            c1 = max(c1, c0 + 1)
+
+            roi = d[r0:r1, c0:c1]
+            valid = np.isfinite(roi) & (roi > 1e-3) & (roi < vmax)
+            n_valid = int(np.count_nonzero(valid))
+
+            if not np.any(valid):
+                twist.linear.x = v_no_read
+                twist.angular.z = w_turn * 0.55
+                action = "no_valid_depth"
+            else:
+                dm = float(roi[valid].min())
+                if dm > safe:
+                    twist.linear.x = v_fwd
+                    twist.angular.z = 0.0
+                    action = "forward"
+                else:
+                    twist.linear.x = 0.0
+                    twist.angular.z = w_turn
+                    action = "turn_obstacle"
+
+            self._pub.publish(twist)
+
+        if dbg:
+            now = time.monotonic()
+            if now - self._dbg_last_t >= dbg_period:
+                self._dbg_last_t = now
+                self.get_logger().info(
+                    "avoidance: action=%s roi_valid_px=%i d_min_m=%s safe_m=%s twist vx=%.4f wz=%.4f"
+                    % (
+                        action,
+                        n_valid,
+                        "%.3f" % dm if np.isfinite(dm) else "nan",
+                        safe,
+                        twist.linear.x,
+                        twist.angular.z,
+                    )
+                )
 
 
 def main() -> None:

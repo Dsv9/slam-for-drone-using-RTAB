@@ -33,6 +33,19 @@ def generate_launch_description():
             # Optional depth-based creep + turn-away (see simple_depth_avoidance_node.py).
             # When true: exploration_controller is OFF unless you bypass this expression.
             DeclareLaunchArgument("enable_avoidance", default_value="false"),
+            # --- simple_depth_avoidance_node tuning (only used when enable_avoidance:=true) ---
+            DeclareLaunchArgument("safe_distance_m", default_value="0.45"),
+            DeclareLaunchArgument("forward_speed_m_s", default_value="0.04"),
+            DeclareLaunchArgument("turn_speed_rad_s", default_value="0.25"),
+            DeclareLaunchArgument("max_range_m", default_value="8.0"),
+            DeclareLaunchArgument("avoidance_publish_hz", default_value="10.0"),
+            DeclareLaunchArgument("roi_row_frac_min", default_value="0.22"),
+            DeclareLaunchArgument("roi_row_frac_max", default_value="0.50"),
+            DeclareLaunchArgument("roi_col_frac_min", default_value="0.43"),
+            DeclareLaunchArgument("roi_col_frac_max", default_value="0.57"),
+            DeclareLaunchArgument("no_reading_forward_m_s", default_value="0.015"),
+            DeclareLaunchArgument("debug_avoidance", default_value="false"),
+            DeclareLaunchArgument("debug_avoidance_period_sec", default_value="1.0"),
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(
                     os.path.join(
@@ -149,10 +162,22 @@ def generate_launch_description():
                     {
                         "depth_topic": "/rgbd_camera/depth_image",
                         "cmd_vel_topic": "/drone/cmd_vel",
-                        "safe_distance_m": 0.7,
-                        "forward_speed_m_s": 0.04,
-                        "turn_speed_rad_s": 0.25,
-                        "publish_hz": 10.0,
+                        "safe_distance_m": LaunchConfiguration("safe_distance_m"),
+                        "forward_speed_m_s": LaunchConfiguration("forward_speed_m_s"),
+                        "turn_speed_rad_s": LaunchConfiguration("turn_speed_rad_s"),
+                        "max_range_m": LaunchConfiguration("max_range_m"),
+                        "publish_hz": LaunchConfiguration("avoidance_publish_hz"),
+                        "roi_row_frac_min": LaunchConfiguration("roi_row_frac_min"),
+                        "roi_row_frac_max": LaunchConfiguration("roi_row_frac_max"),
+                        "roi_col_frac_min": LaunchConfiguration("roi_col_frac_min"),
+                        "roi_col_frac_max": LaunchConfiguration("roi_col_frac_max"),
+                        "no_reading_forward_m_s": LaunchConfiguration(
+                            "no_reading_forward_m_s"
+                        ),
+                        "debug_avoidance": LaunchConfiguration("debug_avoidance"),
+                        "debug_avoidance_period_sec": LaunchConfiguration(
+                            "debug_avoidance_period_sec"
+                        ),
                         "use_sim_time": True,
                     }
                 ],

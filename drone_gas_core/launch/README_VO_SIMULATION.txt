@@ -60,6 +60,12 @@ Rebuild and source workspace as usual, then launch with avoidance on:
   source install/setup.bash
   ros2 launch drone_gas_core full_system.launch.py enable_avoidance:=true enable_exploration:=false
 
+Tune avoidance from launch (examples):
+  ros2 launch drone_gas_core full_system.launch.py enable_avoidance:=true enable_exploration:=false \\
+    safe_distance_m:=0.25 forward_speed_m_s:=0.04 turn_speed_rad_s:=0.15 \\
+    roi_row_frac_min:=0.18 roi_row_frac_max:=0.42 roi_col_frac_min:=0.40 roi_col_frac_max:=0.60 \\
+    debug_avoidance:=true
+
 Checks:
   ros2 topic echo /drone/cmd_vel           # Twist from simple_depth_avoidance_node → watchdog → bridge
   ros2 topic hz /drone/cmd_vel
