@@ -62,9 +62,11 @@ Rebuild and source workspace as usual, then launch with avoidance on:
 
 Tune avoidance from launch (examples):
   ros2 launch drone_gas_core full_system.launch.py enable_avoidance:=true enable_exploration:=false \\
-    safe_distance_m:=0.25 forward_speed_m_s:=0.04 turn_speed_rad_s:=0.15 \\
-    roi_row_frac_min:=0.18 roi_row_frac_max:=0.42 roi_col_frac_min:=0.40 roi_col_frac_max:=0.60 \\
-    debug_avoidance:=true
+    safe_distance_m:=0.35 forward_speed_m_s:=0.025 turn_speed_rad_s:=0.22 \\
+    max_range_m:=3.0 no_reading_forward_m_s:=0.008 avoid_turn_duration_sec:=1.2 \\
+    reverse_speed_m_s:=-0.015 reverse_duration_sec:=1.0 escape_turn_duration_sec:=1.5 \\
+    stuck_timeout_sec:=4.0 roi_row_frac_min:=0.18 roi_row_frac_max:=0.42 \\
+    roi_col_frac_min:=0.40 roi_col_frac_max:=0.60 debug_avoidance:=true
 
 Checks:
   ros2 topic echo /drone/cmd_vel           # Twist from simple_depth_avoidance_node → watchdog → bridge
@@ -78,11 +80,15 @@ Rules:
 Tune (optional ros2 params on simple_depth_avoidance_node): safe_distance_m, forward_speed_m_s,
 turn_speed_rad_s, roi_* fractions for front window.
 
-Escape from clutter (same launch file): stuck_timeout_sec, reverse_speed_m_s,
+Timed avoidance + escape (same launch file): avoid_turn_duration_sec (seconds to yaw in
+AVOID_TURN before retrying forward; avoids endless spin), stuck_timeout_sec, reverse_speed_m_s,
 reverse_duration_sec, escape_turn_duration_sec, alternate_turn_direction, side_roi_enabled,
-side_roi_col_* , side_depth_clear_margin_m, stuck_vx_threshold_m_s, stuck_wz_threshold_rad_s.
-With debug_avoidance:=true, logs show action, d_front_min, d_left_med, d_right_med, vx, wz,
-stuck_timer, and escape phase name.
+side_roi_col_left_min/max, side_roi_col_right_min/max, side_depth_clear_margin_m,
+stuck_vx_threshold_m_s, stuck_wz_threshold_rad_s.
+
+With debug_avoidance:=true, logs periodically show: state (NORMAL / AVOID_TURN /
+REVERSE_ESCAPE / ESCAPE_TURN), action, d_front / d_left / d_right (min depth in ROIs m),
+vx, wz, stuck_accum.
 
 Suggested demo storyline (gas + SLAM robot)
 ------------------------------------------

@@ -1,15 +1,14 @@
-"""Minimal 2D obstacle avoidance using depth ROIs + optional escape from clutter.
+"""Simple 2D depth avoidance with timed turn bursts and escape phases.
 
 Reads /rgbd_camera/depth_image and publishes geometry_msgs/Twist on /drone/cmd_vel.
 
-Intended demo: fixed-height “ground robot” behavior (linear.x + angular.z only).
+State machine:
+  NORMAL — forward when clear; on blocked front, pick side from depth ROIs and enter AVOID_TURN.
+  AVOID_TURN — in-place turn for avoid_turn_duration_sec only, then NORMAL (no endless spin).
+  REVERSE_ESCAPE — short reverse, then ESCAPE_TURN.
+  ESCAPE_TURN — timed opposite yaw, then NORMAL.
 
-Do not run this together with exploration_controller_node or visual_odometry_smoke_motion —
-only one publisher should drive /drone/cmd_vel.
-
-Reactive escape: if the robot spends too long turning / creeping with little forward motion,
-it reverses briefly then yaws opposite to the last stuck turn, then resumes normal logic.
-Side ROIs bias turn direction when the front is blocked (clearer side = turn toward it).
+Stuck: in NORMAL only, when commanded motion matches “mostly turning / creeping” for stuck_timeout_sec.
 """
 from __future__ import annotations
 
@@ -85,10 +84,11 @@ def _min_depth(roi: np.ndarray, vmax: float) -> Tuple[float, int]:
     return float(roi[valid].min()), n
 
 
-class _Escape(IntEnum):
+class _State(IntEnum):
     NORMAL = 0
-    REVERSE = 1
-    ESCAPE_TURN = 2
+    AVOID_TURN = 1
+    REVERSE_ESCAPE = 2
+    ESCAPE_TURN = 3
 
 
 def _as_bool(v) -> bool:
@@ -97,16 +97,26 @@ def _as_bool(v) -> bool:
     return str(v).lower() in ("true", "1", "yes")
 
 
+def _state_name(s: _State) -> str:
+    if s == _State.NORMAL:
+        return "NORMAL"
+    if s == _State.AVOID_TURN:
+        return "AVOID_TURN"
+    if s == _State.REVERSE_ESCAPE:
+        return "REVERSE_ESCAPE"
+    return "ESCAPE_TURN"
+
+
 class SimpleDepthAvoidanceNode(Node):
     def __init__(self) -> None:
         super().__init__("simple_depth_avoidance")
         self.declare_parameter("depth_topic", "/rgbd_camera/depth_image")
         self.declare_parameter("cmd_vel_topic", "/drone/cmd_vel")
         self.declare_parameter("publish_hz", 10.0)
-        self.declare_parameter("safe_distance_m", 0.45)
-        self.declare_parameter("max_range_m", 8.0)
-        self.declare_parameter("forward_speed_m_s", 0.04)
-        self.declare_parameter("turn_speed_rad_s", 0.25)
+        self.declare_parameter("safe_distance_m", 0.35)
+        self.declare_parameter("max_range_m", 3.0)
+        self.declare_parameter("forward_speed_m_s", 0.025)
+        self.declare_parameter("turn_speed_rad_s", 0.22)
         self.declare_parameter("roi_row_frac_min", 0.22)
         self.declare_parameter("roi_row_frac_max", 0.50)
         self.declare_parameter("roi_col_frac_min", 0.43)
@@ -117,13 +127,14 @@ class SimpleDepthAvoidanceNode(Node):
         self.declare_parameter("roi_col_frac_end", -1.0)
         self.declare_parameter("debug_avoidance", False)
         self.declare_parameter("debug_avoidance_period_sec", 1.0)
-        self.declare_parameter("no_reading_forward_m_s", 0.015)
+        self.declare_parameter("no_reading_forward_m_s", 0.008)
 
-        # Stuck → reverse → opposite turn
+        self.declare_parameter("avoid_turn_duration_sec", 1.2)
+
         self.declare_parameter("stuck_timeout_sec", 4.0)
-        self.declare_parameter("reverse_speed_m_s", -0.02)
+        self.declare_parameter("reverse_speed_m_s", -0.015)
         self.declare_parameter("reverse_duration_sec", 1.0)
-        self.declare_parameter("escape_turn_duration_sec", 2.0)
+        self.declare_parameter("escape_turn_duration_sec", 1.5)
         self.declare_parameter("alternate_turn_direction", True)
         self.declare_parameter("side_roi_enabled", True)
         self.declare_parameter("side_roi_col_left_min", 0.08)
@@ -153,12 +164,14 @@ class SimpleDepthAvoidanceNode(Node):
         self._warn_no_depth = False
         self._dbg_last_t = 0.0
 
-        self._escape = _Escape.NORMAL
-        self._escape_phase_t0 = 0.0
+        self._state = _State.NORMAL
+        self._phase_t0 = 0.0
         self._stuck_accum = 0.0
         self._last_mono: Optional[float] = None
         self._last_stuck_wz_sign = 1.0
         self._alt_sign = 1.0
+        self._avoid_turn_wz = 0.0
+        self._escape_turn_wz = 0.0
 
     def _depth_cb(self, msg: Image) -> None:
         d = _decode_depth(msg)
@@ -167,7 +180,8 @@ class SimpleDepthAvoidanceNode(Node):
 
     def _tick(self) -> None:
         now = time.monotonic()
-        dt = 0.0 if self._last_mono is None else max(0.0, now - self._last_mono)
+        prev = self._last_mono
+        dt = 0.0 if prev is None else max(0.0, now - prev)
         self._last_mono = now
 
         safe = float(self.get_parameter("safe_distance_m").value)
@@ -184,6 +198,7 @@ class SimpleDepthAvoidanceNode(Node):
         v_rev = min(v_rev, -1e-6)
         rev_dur = max(float(self.get_parameter("reverse_duration_sec").value), 0.1)
         esc_turn_dur = max(float(self.get_parameter("escape_turn_duration_sec").value), 0.1)
+        avoid_turn_dur = max(float(self.get_parameter("avoid_turn_duration_sec").value), 0.05)
         side_on = _as_bool(self.get_parameter("side_roi_enabled").value)
         alt_on = _as_bool(self.get_parameter("alternate_turn_direction").value)
         slm = float(self.get_parameter("side_roi_col_left_min").value)
@@ -204,46 +219,68 @@ class SimpleDepthAvoidanceNode(Node):
         d_front = float("nan")
         d_left = float("nan")
         d_right = float("nan")
-        n_front = 0
 
-        # --- escape phases (override normal) ---
-        if self._escape == _Escape.REVERSE:
-            elapsed = now - self._escape_phase_t0
+        # --- REVERSE_ESCAPE ---
+        if self._state == _State.REVERSE_ESCAPE:
+            elapsed = now - self._phase_t0
             twist.linear.x = v_rev
             twist.angular.z = 0.0
             action = "reverse_escape"
             if elapsed >= rev_dur:
-                self._escape = _Escape.ESCAPE_TURN
-                self._escape_phase_t0 = now
-            self._pub.publish(twist)
+                self._state = _State.ESCAPE_TURN
+                self._phase_t0 = now
+                self._escape_turn_wz = -np.sign(self._last_stuck_wz_sign or 1.0) * abs(w_turn)
             self._stuck_accum = 0.0
-            self._log_debug(dbg, dbg_period, now, action, d_front, d_left, d_right, twist)
+            self._pub.publish(twist)
+            self._log_debug(
+                dbg, dbg_period, now, action, _state_name(self._state), d_front, d_left, d_right, twist
+            )
             return
 
-        if self._escape == _Escape.ESCAPE_TURN:
-            elapsed = now - self._escape_phase_t0
+        # --- ESCAPE_TURN ---
+        if self._state == _State.ESCAPE_TURN:
+            elapsed = now - self._phase_t0
             twist.linear.x = 0.0
-            twist.angular.z = -np.sign(self._last_stuck_wz_sign or 1.0) * abs(w_turn)
+            twist.angular.z = float(self._escape_turn_wz)
             action = "escape_turn"
             if elapsed >= esc_turn_dur:
-                self._escape = _Escape.NORMAL
+                self._state = _State.NORMAL
                 if alt_on:
                     self._alt_sign *= -1.0
-            self._pub.publish(twist)
             self._stuck_accum = 0.0
-            self._log_debug(dbg, dbg_period, now, action, d_front, d_left, d_right, twist)
+            self._pub.publish(twist)
+            self._log_debug(
+                dbg, dbg_period, now, action, _state_name(self._state), d_front, d_left, d_right, twist
+            )
             return
 
-        # --- NORMAL depth logic ---
+        # --- AVOID_TURN (timed burst only) ---
+        if self._state == _State.AVOID_TURN:
+            elapsed = now - self._phase_t0
+            twist.linear.x = 0.0
+            twist.angular.z = float(self._avoid_turn_wz)
+            action = "avoid_turn"
+            if elapsed >= avoid_turn_dur:
+                self._state = _State.NORMAL
+            self._stuck_accum = 0.0
+            self._pub.publish(twist)
+            self._log_debug(
+                dbg, dbg_period, now, action, _state_name(self._state), d_front, d_left, d_right, twist
+            )
+            return
+
+        # --- NORMAL ---
         d = self._last_depth
         if d is None:
             if not self._warn_no_depth:
                 self._warn_no_depth = True
                 self.get_logger().warn("No depth decoded yet (%s)." % self._topic)
-            self._pub.publish(twist)
             action = "no_frame"
             self._stuck_accum = 0.0
-            self._log_debug(dbg, dbg_period, now, action, d_front, d_left, d_right, twist)
+            self._pub.publish(twist)
+            self._log_debug(
+                dbg, dbg_period, now, action, _state_name(self._state), d_front, d_left, d_right, twist
+            )
             return
 
         h, w = d.shape[:2]
@@ -257,6 +294,7 @@ class SimpleDepthAvoidanceNode(Node):
             d_left, _ = _min_depth(d[lr0:lr1, lc0:lc1], vmax)
             d_right, _ = _min_depth(d[rr0:rr1, rc0:rc1], vmax)
 
+        entering_avoid = False
         if not np.isfinite(d_front) or n_front == 0:
             twist.linear.x = v_no_read
             base_wz = w_turn * 0.55
@@ -269,33 +307,37 @@ class SimpleDepthAvoidanceNode(Node):
             twist.angular.z = 0.0
             action = "forward"
         else:
-            twist.linear.x = 0.0
-            base_wz = w_turn
-            twist.angular.z = self._biased_turn_wz(
-                base_wz, d_left, d_right, side_on, side_margin, alt_on
+            entering_avoid = True
+            self._state = _State.AVOID_TURN
+            self._phase_t0 = now
+            self._avoid_turn_wz = self._biased_turn_wz(
+                w_turn, d_left, d_right, side_on, side_margin, alt_on
             )
-            action = "turn_obstacle"
+            twist.linear.x = 0.0
+            twist.angular.z = float(self._avoid_turn_wz)
+            action = "avoid_turn_start"
 
-        # stuck detection (only in NORMAL, before publishing)
         wz_abs = abs(twist.angular.z)
         vx_abs = abs(twist.linear.x)
         is_stuck = wz_abs >= wz_stuck and vx_abs <= vx_stuck
-        if is_stuck:
+        if not entering_avoid and is_stuck:
             self._stuck_accum += dt
         else:
             self._stuck_accum = 0.0
 
         if self._stuck_accum >= stuck_to:
-            self._last_stuck_wz_sign = np.sign(twist.angular.z) or 1.0
-            self._escape = _Escape.REVERSE
-            self._escape_phase_t0 = now
+            self._last_stuck_wz_sign = float(np.sign(twist.angular.z) or 1.0)
+            self._state = _State.REVERSE_ESCAPE
+            self._phase_t0 = now
             self._stuck_accum = 0.0
             twist.linear.x = v_rev
             twist.angular.z = 0.0
             action = "reverse_escape"
 
         self._pub.publish(twist)
-        self._log_debug(dbg, dbg_period, now, action, d_front, d_left, d_right, twist)
+        self._log_debug(
+            dbg, dbg_period, now, action, _state_name(self._state), d_front, d_left, d_right, twist
+        )
 
     def _biased_turn_wz(
         self,
@@ -306,7 +348,7 @@ class SimpleDepthAvoidanceNode(Node):
         margin_m: float,
         alt_on: bool,
     ) -> float:
-        """Positive wz = CCW (turn left). Clearer left → +wz; clearer right → -wz."""
+        """Positive wz = CCW (turn left). Clearer left -> +wz; clearer right -> -wz."""
         if not side_on or (not np.isfinite(d_left) and not np.isfinite(d_right)):
             return base_mag * self._alt_sign if alt_on else base_mag
         if not np.isfinite(d_left):
@@ -325,6 +367,7 @@ class SimpleDepthAvoidanceNode(Node):
         dbg_period: float,
         now: float,
         action: str,
+        state_name: str,
         d_front: float,
         d_left: float,
         d_right: float,
@@ -339,8 +382,9 @@ class SimpleDepthAvoidanceNode(Node):
         dl = "%.3f" % d_left if np.isfinite(d_left) else "nan"
         dr = "%.3f" % d_right if np.isfinite(d_right) else "nan"
         self.get_logger().info(
-            "avoidance: action=%s d_front_min=%s d_left_min=%s d_right_min=%s vx=%.4f wz=%.4f stuck_timer=%.2f escape=%s"
+            "avoidance: state=%s action=%s d_front=%s d_left=%s d_right=%s vx=%.4f wz=%.4f stuck_accum=%.2fs"
             % (
+                state_name,
                 action,
                 df,
                 dl,
@@ -348,7 +392,6 @@ class SimpleDepthAvoidanceNode(Node):
                 twist.linear.x,
                 twist.angular.z,
                 self._stuck_accum,
-                self._escape.name,
             )
         )
 

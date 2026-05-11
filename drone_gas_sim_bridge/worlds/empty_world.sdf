@@ -141,10 +141,10 @@
       </link>
     </model>
 
-    <!-- Distant decor only (corners); not in the south +X demo lane -->
+    <!-- Distant decor + mid-room color (spread for demo; not one corner cluster) -->
     <model name="ob_box_a">
       <static>true</static>
-      <pose>5.2 3.8 0.55 0 0 0.2</pose>
+      <pose>3.6 3.4 0.55 0 0 0.2</pose>
       <link name="link">
         <collision name="c"><geometry><box><size>1.0 0.75 0.9</size></box></geometry></collision>
         <visual name="v">
@@ -166,7 +166,7 @@
     </model>
     <model name="ob_box_c">
       <static>true</static>
-      <pose>5.5 -4.8 0.65 0 0 0.5</pose>
+      <pose>2.0 -5.35 0.65 0 0 0.5</pose>
       <link name="link">
         <collision name="c"><geometry><box><size>1.4 0.5 1.1</size></box></geometry></collision>
         <visual name="v">
@@ -207,10 +207,10 @@
     </model>
 
     <!-- RTAB visual feature -->
-    <!-- Vertical strip flush to inner east wall (does not narrow mid-room lane). -->
+    <!-- Vertical strip mid-field (north of drive lane); east wall strip kept separate. -->
     <model name="vo_strip_mid">
       <static>true</static>
-      <pose>5.42 -1.85 1.05 0 0 1.571</pose>
+      <pose>2.65 -1.42 1.05 0 0 1.571</pose>
       <link name="link">
         <collision name="c"><geometry><box><size>0.10 0.45 2.0</size></box></geometry></collision>
         <visual name="v"><geometry><box><size>0.10 0.45 2.0</size></box></geometry>
@@ -219,7 +219,7 @@
     </model>
 
     <!-- RTAB visual feature -->
-    <!-- Second east-wall strip; large y-separation from vo_strip_mid for parallax. -->
+    <!-- Second strip on inner east wall; separated from vo_strip_mid in +X and y. -->
     <model name="vo_strip_side">
       <static>true</static>
       <pose>5.42 -4.55 1.05 0 0 1.571</pose>
@@ -269,10 +269,10 @@
     </model>
 
     <!-- RTAB visual feature -->
-    <!-- Small cube near south wall (outside drive lane) for texture / feature motion. -->
+    <!-- Small cube mid-room north of lane (>= ~1 m from demo_avoid_box_L). -->
     <model name="vo_feat_cube_a">
       <static>true</static>
-      <pose>1.85 -5.35 0.42 0 0 0</pose>
+      <pose>2.45 -2.52 0.42 0 0 0</pose>
       <link name="link">
         <collision name="c"><geometry><box><size>0.45 0.45 0.45</size></box></geometry></collision>
         <visual name="v"><geometry><box><size>0.45 0.45 0.45</size></box></geometry>

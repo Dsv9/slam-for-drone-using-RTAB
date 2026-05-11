@@ -34,23 +34,24 @@ def generate_launch_description():
             # When true: exploration_controller is OFF unless you bypass this expression.
             DeclareLaunchArgument("enable_avoidance", default_value="false"),
             # --- simple_depth_avoidance_node tuning (only used when enable_avoidance:=true) ---
-            DeclareLaunchArgument("safe_distance_m", default_value="0.45"),
-            DeclareLaunchArgument("forward_speed_m_s", default_value="0.04"),
-            DeclareLaunchArgument("turn_speed_rad_s", default_value="0.25"),
-            DeclareLaunchArgument("max_range_m", default_value="8.0"),
+            DeclareLaunchArgument("safe_distance_m", default_value="0.35"),
+            DeclareLaunchArgument("forward_speed_m_s", default_value="0.025"),
+            DeclareLaunchArgument("turn_speed_rad_s", default_value="0.22"),
+            DeclareLaunchArgument("max_range_m", default_value="3.0"),
             DeclareLaunchArgument("avoidance_publish_hz", default_value="10.0"),
             DeclareLaunchArgument("roi_row_frac_min", default_value="0.22"),
             DeclareLaunchArgument("roi_row_frac_max", default_value="0.50"),
             DeclareLaunchArgument("roi_col_frac_min", default_value="0.43"),
             DeclareLaunchArgument("roi_col_frac_max", default_value="0.57"),
-            DeclareLaunchArgument("no_reading_forward_m_s", default_value="0.015"),
+            DeclareLaunchArgument("no_reading_forward_m_s", default_value="0.008"),
             DeclareLaunchArgument("debug_avoidance", default_value="false"),
             DeclareLaunchArgument("debug_avoidance_period_sec", default_value="1.0"),
-            # --- escape + side ROI (simple_depth_avoidance_node) ---
+            # --- timed avoid burst + escape (simple_depth_avoidance_node) ---
+            DeclareLaunchArgument("avoid_turn_duration_sec", default_value="1.2"),
             DeclareLaunchArgument("stuck_timeout_sec", default_value="4.0"),
-            DeclareLaunchArgument("reverse_speed_m_s", default_value="-0.02"),
+            DeclareLaunchArgument("reverse_speed_m_s", default_value="-0.015"),
             DeclareLaunchArgument("reverse_duration_sec", default_value="1.0"),
-            DeclareLaunchArgument("escape_turn_duration_sec", default_value="2.0"),
+            DeclareLaunchArgument("escape_turn_duration_sec", default_value="1.5"),
             DeclareLaunchArgument("alternate_turn_direction", default_value="true"),
             DeclareLaunchArgument("side_roi_enabled", default_value="true"),
             DeclareLaunchArgument("side_roi_col_left_min", default_value="0.08"),
@@ -187,6 +188,9 @@ def generate_launch_description():
                         "roi_col_frac_max": LaunchConfiguration("roi_col_frac_max"),
                         "no_reading_forward_m_s": LaunchConfiguration(
                             "no_reading_forward_m_s"
+                        ),
+                        "avoid_turn_duration_sec": LaunchConfiguration(
+                            "avoid_turn_duration_sec"
                         ),
                         "debug_avoidance": LaunchConfiguration("debug_avoidance"),
                         "debug_avoidance_period_sec": LaunchConfiguration(
