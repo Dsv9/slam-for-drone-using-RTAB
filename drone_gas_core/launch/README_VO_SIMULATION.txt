@@ -54,6 +54,19 @@ Expected success
 • RTAB-Map stops “no odometry is provided”
 • Map grows after slow motion
 
+Manual Gazebo /cmd_vel test (bypasses avoidance — tests bridge + plugin)
+---------------------------------------------------------------------------
+  ros2 topic pub /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.08, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}" -r 10
+
+If the drone does not move, the problem is NOT avoidance logic — check ros_gz_bridge
+and simple_drone VelocityControl plugin on /cmd_vel.
+
+Avoidance chain (when enable_avoidance:=true):
+  simple_depth_avoidance_node -> /drone/cmd_vel
+  cmd_vel_watchdog_node -> /drone/cmd_vel_safe
+  gazebo_controller_bridge_node -> /cmd_vel
+  ros_gz parameter_bridge -> Gazebo
+
 Optional VO motion (one cmd_vel publisher only)
 -----------------------------------------------
   ros2 run drone_gas_core visual_odometry_smoke_motion --ros-args -p linear_x:=0.02

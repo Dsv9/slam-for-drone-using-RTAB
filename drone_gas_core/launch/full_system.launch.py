@@ -54,19 +54,22 @@ def generate_launch_description():
             DeclareLaunchArgument("enable_rtabmap", default_value="true"),
             DeclareLaunchArgument("enable_rviz", default_value="true"),
             DeclareLaunchArgument("debug_odom", default_value="true"),
-            # --- simple_depth_avoidance_node (only when enable_avoidance:=true) ---
+            # --- DEMO closed-loop avoidance (only when enable_avoidance:=true) ---
             DeclareLaunchArgument("safe_distance_m", default_value="0.30"),
             DeclareLaunchArgument("critical_distance_m", default_value="0.18"),
             DeclareLaunchArgument("clear_distance_m", default_value="0.45"),
-            DeclareLaunchArgument("forward_speed_m_s", default_value="0.025"),
-            DeclareLaunchArgument("slow_forward_speed_m_s", default_value="0.012"),
-            DeclareLaunchArgument("turn_speed_rad_s", default_value="0.18"),
-            DeclareLaunchArgument("search_turn_speed_rad_s", default_value="0.12"),
+            DeclareLaunchArgument("forward_speed_m_s", default_value="0.060"),
+            DeclareLaunchArgument("slow_forward_speed_m_s", default_value="0.030"),
+            DeclareLaunchArgument("turn_speed_rad_s", default_value="0.35"),
+            DeclareLaunchArgument("search_turn_speed_rad_s", default_value="0.20"),
+            DeclareLaunchArgument("reverse_speed_m_s", default_value="-0.040"),
+            DeclareLaunchArgument("reverse_time_s", default_value="1.2"),
+            DeclareLaunchArgument("recovery_turn_time_s", default_value="1.8"),
+            DeclareLaunchArgument("stuck_timeout_s", default_value="2.5"),
+            DeclareLaunchArgument("progress_epsilon_m", default_value="0.025"),
             DeclareLaunchArgument("max_range_m", default_value="3.0"),
-            DeclareLaunchArgument("stuck_timeout_s", default_value="3.0"),
-            DeclareLaunchArgument("progress_epsilon_m", default_value="0.03"),
-            DeclareLaunchArgument("reverse_time_s", default_value="1.0"),
-            DeclareLaunchArgument("reverse_speed_m_s", default_value="-0.010"),
+            DeclareLaunchArgument("min_effective_linear_speed_m_s", default_value="0.025"),
+            DeclareLaunchArgument("min_effective_turn_speed_rad_s", default_value="0.20"),
             DeclareLaunchArgument("avoidance_publish_hz", default_value="10.0"),
             DeclareLaunchArgument("debug_avoidance", default_value="true"),
             DeclareLaunchArgument("debug_avoidance_period_sec", default_value="1.0"),
@@ -187,11 +190,19 @@ def generate_launch_description():
                         "search_turn_speed_rad_s": LaunchConfiguration(
                             "search_turn_speed_rad_s"
                         ),
+                        "recovery_turn_time_s": LaunchConfiguration("recovery_turn_time_s"),
                         "max_range_m": LaunchConfiguration("max_range_m"),
                         "stuck_timeout_s": LaunchConfiguration("stuck_timeout_s"),
                         "progress_epsilon_m": LaunchConfiguration("progress_epsilon_m"),
                         "reverse_time_s": LaunchConfiguration("reverse_time_s"),
                         "reverse_speed_m_s": LaunchConfiguration("reverse_speed_m_s"),
+                        "min_effective_linear_speed_m_s": LaunchConfiguration(
+                            "min_effective_linear_speed_m_s"
+                        ),
+                        "min_effective_turn_speed_rad_s": LaunchConfiguration(
+                            "min_effective_turn_speed_rad_s"
+                        ),
+                        "demo_avoidance_mode": True,
                         "publish_hz": LaunchConfiguration("avoidance_publish_hz"),
                         "debug_avoidance": LaunchConfiguration("debug_avoidance"),
                         "debug_avoidance_period_sec": LaunchConfiguration(

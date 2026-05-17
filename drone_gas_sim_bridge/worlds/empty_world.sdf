@@ -1,8 +1,7 @@
 <?xml version="1.0"?>
 <!--
   VO + avoidance demo world.
-  Spawn: (-3.5, -3.05), forward +X. vo_calib_wall ahead (visual-only) for rgbd_odometry features.
-  Drive lane y=-3.05 (~1.6 m clear). First 1.2 m +X: no collision (clear zone ends ~x=-2.3).
+  Spawn: (-4.5, -3.05), forward +X. Open lane ~1.7 m wide. First box west face ~x=1.96 (>=2 m clear from spawn).
   Four separated avoidance boxes, staggered L/R, >= ~1.2 m between surfaces.
 -->
 <sdf version="1.9">
@@ -190,7 +189,7 @@
     </model>
 
     <!-- clear spawn zone -->
-    <!-- No collision west of x≈-2.3 (1.2 m open +X from spawn at x=-3.5). -->
+    <!-- No collision west of x≈-3.2 (>=2 m open +X from spawn at x=-4.5). -->
 
     <!-- main demo corridor -->
     <!-- Centerline y=-3.05; collision kept out of y∈[-3.85,-2.25] (~1.6 m free width). -->
@@ -288,10 +287,10 @@
       </link>
     </model>
 
-    <!-- avoidance obstacle — 1st: left/north of lane; west face x≈-0.80 (1.2 m clear +X from spawn) -->
+    <!-- avoidance obstacle — 1st: left/north of lane; west face ~x=1.96 (open lane from spawn) -->
     <model name="demo_avoid_box_L">
       <static>true</static>
-      <pose>-0.56 -2.02 0.38 0 0 0</pose>
+      <pose>2.20 -1.85 0.38 0 0 0</pose>
       <link name="link">
         <collision name="c"><geometry><box><size>0.48 0.48 0.48</size></box></geometry></collision>
         <visual name="v"><geometry><box><size>0.48 0.48 0.48</size></box></geometry>
@@ -299,10 +298,10 @@
       </link>
     </model>
 
-    <!-- avoidance obstacle — 2nd: right/south of lane; ~2.0 m surface gap from box_L in +X -->
+    <!-- avoidance obstacle — 2nd: right/south of lane; >=1.2 m from box_L -->
     <model name="demo_avoid_box_R">
       <static>true</static>
-      <pose>1.55 -4.42 0.38 0 0 0</pose>
+      <pose>3.80 -4.55 0.38 0 0 0</pose>
       <link name="link">
         <collision name="c"><geometry><box><size>0.48 0.48 0.48</size></box></geometry></collision>
         <visual name="v"><geometry><box><size>0.48 0.48 0.48</size></box></geometry>
@@ -310,10 +309,10 @@
       </link>
     </model>
 
-    <!-- avoidance obstacle — 3rd: left/north again; ~1.4 m +X from box_R east face -->
+    <!-- avoidance obstacle — 3rd: left/north; farther +X -->
     <model name="demo_avoid_box_C">
       <static>true</static>
-      <pose>3.35 -2.02 0.38 0 0 0</pose>
+      <pose>5.20 -1.90 0.38 0 0 0</pose>
       <link name="link">
         <collision name="c"><geometry><box><size>0.48 0.48 0.48</size></box></geometry></collision>
         <visual name="v"><geometry><box><size>0.48 0.48 0.48</size></box></geometry>
@@ -321,10 +320,10 @@
       </link>
     </model>
 
-    <!-- avoidance obstacle — 4th: right/south; far forward, no pinch with box_C -->
+    <!-- avoidance obstacle — 4th: right/south; far forward -->
     <model name="demo_avoid_box_D">
       <static>true</static>
-      <pose>5.05 -4.42 0.38 0 0 0</pose>
+      <pose>5.80 -4.60 0.38 0 0 0</pose>
       <link name="link">
         <collision name="c"><geometry><box><size>0.48 0.48 0.48</size></box></geometry></collision>
         <visual name="v"><geometry><box><size>0.48 0.48 0.48</size></box></geometry>
