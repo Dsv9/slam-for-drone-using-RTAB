@@ -10,7 +10,7 @@ def generate_launch_description():
         ExecuteProcess(
             cmd=[
                 "ros2", "bag", "record", "-o", bag_name,
-                "/rtabmap/localization_pose", "/rtabmap/odom",
+                "/rtabmap/localization_pose", "/odom",
                 "/gas/concentration", "/gas/chemical_map",
                 "/drone/cmd_vel", "/drone/cmd_vel_safe",
             ],

@@ -11,7 +11,7 @@ class ChemicalMapperNode(Node):
     def __init__(self) -> None:
         super().__init__("chemical_mapper_node")
         self.declare_parameter("pose_topic", "/rtabmap/localization_pose")
-        self.declare_parameter("odom_topic", "/rtabmap/odom")
+        self.declare_parameter("odom_topic", "/odom")
         self.declare_parameter("gas_topic", "/gas/concentration")
         self.declare_parameter("map_topic", "/gas/chemical_map")
         self.declare_parameter("map_frame", "map")

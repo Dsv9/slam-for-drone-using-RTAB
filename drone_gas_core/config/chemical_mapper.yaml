@@ -1,7 +1,7 @@
 chemical_mapper_node:
   ros__parameters:
     pose_topic: /rtabmap/localization_pose
-    odom_topic: /rtabmap/odom
+    odom_topic: /odom
     gas_topic: /gas/concentration
     map_topic: /gas/chemical_map
     map_frame: map

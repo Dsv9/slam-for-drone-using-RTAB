@@ -11,7 +11,7 @@ class GazeboControllerBridgeNode(Node):
     def __init__(self) -> None:
         super().__init__("gazebo_controller_bridge_node")
         self.declare_parameter("input_cmd_vel_topic", "/drone/cmd_vel")
-        self.declare_parameter("odom_topic", "/rtabmap/odom")
+        self.declare_parameter("odom_topic", "/odom")
         self.declare_parameter("command_mode", "velocity")
         self.declare_parameter("gazebo_twist_topic", "/cmd_vel")
         self.declare_parameter("gazebo_pose_topic", "/drone/target_pose")

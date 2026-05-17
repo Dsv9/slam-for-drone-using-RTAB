@@ -11,7 +11,7 @@ class GasSensorSimNode(Node):
     def __init__(self) -> None:
         super().__init__("gas_sensor_sim_node")
         self.declare_parameter("pose_topic", "/rtabmap/localization_pose")
-        self.declare_parameter("odom_topic", "/rtabmap/odom")
+        self.declare_parameter("odom_topic", "/odom")
         self.declare_parameter("gas_topic", "/gas/concentration")
         self.declare_parameter("publish_hz", 10.0)
         self.declare_parameter("noise_std", 0.01)

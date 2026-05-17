@@ -54,8 +54,8 @@ def generate_launch_description():
             DeclareLaunchArgument("frame_id", default_value="base_link"),
             DeclareLaunchArgument("odom_frame_id", default_value="odom"),
             DeclareLaunchArgument("map_frame_id", default_value="map"),
-            # Relative to namespace rtabmap -> /rtabmap/odom (project convention).
-            DeclareLaunchArgument("odom_topic", default_value="odom"),
+            # Absolute topic: rgbd_odometry + rtabmap subscribe/publish on /odom (not /rtabmap/odom).
+            DeclareLaunchArgument("odom_topic", default_value="/odom"),
             DeclareLaunchArgument("vo_frame_id", default_value="odom"),
             DeclareLaunchArgument("namespace", default_value="rtabmap"),
             DeclareLaunchArgument("debug_odom", default_value="true"),

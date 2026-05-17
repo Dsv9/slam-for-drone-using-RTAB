@@ -11,7 +11,7 @@ class CmdVelWatchdogNode(Node):
         super().__init__("cmd_vel_watchdog_node")
         self.declare_parameter("input_cmd_vel_topic", "/drone/cmd_vel")
         self.declare_parameter("safe_cmd_vel_topic", "/drone/cmd_vel_safe")
-        self.declare_parameter("odom_topic", "/rtabmap/odom")
+        self.declare_parameter("odom_topic", "/odom")
         self.declare_parameter("cmd_timeout_sec", 0.5)
         self.declare_parameter("odom_timeout_sec", 1.0)
         self.declare_parameter("publish_hz", 20.0)

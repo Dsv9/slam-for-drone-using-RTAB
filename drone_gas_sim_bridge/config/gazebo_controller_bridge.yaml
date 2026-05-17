@@ -1,7 +1,7 @@
 gazebo_controller_bridge_node:
   ros__parameters:
     input_cmd_vel_topic: /drone/cmd_vel
-    odom_topic: /rtabmap/odom
+    odom_topic: /odom
     command_mode: velocity
     gazebo_twist_topic: /cmd_vel
     gazebo_pose_topic: /drone/target_pose

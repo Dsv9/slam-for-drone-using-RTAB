@@ -1,7 +1,7 @@
 gas_sensor_sim_node:
   ros__parameters:
     pose_topic: /rtabmap/localization_pose
-    odom_topic: /rtabmap/odom
+    odom_topic: /odom
     gas_topic: /gas/concentration
     publish_hz: 10.0
     noise_std: 0.01

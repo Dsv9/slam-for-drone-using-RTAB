@@ -1,7 +1,7 @@
 exploration_controller_node:
   ros__parameters:
     pose_topic: /rtabmap/localization_pose
-    odom_topic: /rtabmap/odom
+    odom_topic: /odom
     chemical_map_topic: /gas/chemical_map
     cmd_vel_topic: /drone/cmd_vel
     control_hz: 10.0

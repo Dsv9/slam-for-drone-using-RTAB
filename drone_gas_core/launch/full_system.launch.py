@@ -34,6 +34,7 @@ def generate_launch_description():
                             "rgb_topic": "/rgbd_camera/image",
                             "depth_topic": "/rgbd_camera/depth_image",
                             "camera_info_topic": "/rgbd_camera/camera_info",
+                            "odom_topic": "/odom",
                             "debug_odom": debug_odom,
                             "enable_rtabmap_viz": "true",
                         }.items(),

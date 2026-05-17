@@ -10,7 +10,7 @@ class ExplorationControllerNode(Node):
     def __init__(self) -> None:
         super().__init__("exploration_controller_node")
         self.declare_parameter("pose_topic", "/rtabmap/localization_pose")
-        self.declare_parameter("odom_topic", "/rtabmap/odom")
+        self.declare_parameter("odom_topic", "/odom")
         self.declare_parameter("chemical_map_topic", "/gas/chemical_map")
         self.declare_parameter("cmd_vel_topic", "/drone/cmd_vel")
         self.declare_parameter("control_hz", 10.0)
