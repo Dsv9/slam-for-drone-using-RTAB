@@ -1,7 +1,7 @@
-"""Depth-based reactive avoidance with ROI distances and recovery state machine.
+"""Timer-based depth avoidance: left / front / right ROIs, recovery state machine.
 
 Subscribes: /rgbd_camera/depth_image, /odom
-Publishes: /drone/cmd_vel (geometry_msgs/Twist) at fixed rate while enabled.
+Publishes: /drone/cmd_vel (10 Hz) -> cmd_vel_watchdog -> Gazebo /cmd_vel
 """
 from __future__ import annotations
 
@@ -50,8 +50,7 @@ def _frac_window(h: int, w: int, r0f: float, r1f: float, c0f: float, c1f: float)
     return r0, max(r1, r0 + 1), c0, max(c1, c0 + 1)
 
 
-def _robust_distance(roi: np.ndarray, vmax: float, percentile: float = 20.0) -> Tuple[float, int]:
-    """Robust range estimate: percentile of valid depths (closer = smaller)."""
+def _robust_distance(roi: np.ndarray, vmax: float, percentile: float) -> Tuple[float, int]:
     valid = np.isfinite(roi) & (roi > 1e-3) & (roi < vmax)
     n = int(np.count_nonzero(valid))
     if n == 0:
@@ -67,11 +66,7 @@ class _State(IntEnum):
     TURN_RIGHT = 3
     REVERSE = 4
     RECOVERY_TURN = 5
-    STOP = 6
-
-
-def _state_name(s: _State) -> str:
-    return s.name
+    SEARCH_TURN = 6
 
 
 def _as_bool(v) -> bool:
@@ -95,13 +90,14 @@ class SimpleDepthAvoidanceNode(Node):
         self.declare_parameter("slow_forward_speed_m_s", 0.012)
         self.declare_parameter("turn_speed_rad_s", 0.18)
         self.declare_parameter("search_turn_speed_rad_s", 0.12)
-        self.declare_parameter("max_range_m", 3.0)
-        self.declare_parameter("stuck_timeout_s", 3.0)
-        self.declare_parameter("reverse_time_s", 1.0)
         self.declare_parameter("reverse_speed_m_s", -0.010)
-        self.declare_parameter("stuck_progress_m", 0.03)
+        self.declare_parameter("reverse_time_s", 1.0)
+        self.declare_parameter("stuck_timeout_s", 3.0)
+        self.declare_parameter("progress_epsilon_m", 0.03)
+        self.declare_parameter("max_range_m", 3.0)
         self.declare_parameter("recovery_turn_time_s", 1.5)
-        self.declare_parameter("slow_steer_gain", 0.35)
+        self.declare_parameter("distance_hysteresis_m", 0.06)
+        self.declare_parameter("slow_steer_gain", 0.40)
         self.declare_parameter("depth_percentile", 20.0)
 
         self.declare_parameter("roi_row_frac_min", 0.22)
@@ -125,35 +121,33 @@ class SimpleDepthAvoidanceNode(Node):
         self._depth_topic = str(self.get_parameter("depth_topic").value)
         self.create_subscription(Image, self._depth_topic, self._depth_cb, qos_sensor)
         self.create_subscription(
-            Odometry,
-            str(self.get_parameter("odom_topic").value),
-            self._odom_cb,
-            20,
+            Odometry, str(self.get_parameter("odom_topic").value), self._odom_cb, 20
         )
 
-        cv_topic = str(self.get_parameter("cmd_vel_topic").value)
-        self._pub = self.create_publisher(Twist, cv_topic, 10)
-
+        self._pub = self.create_publisher(
+            Twist, str(self.get_parameter("cmd_vel_topic").value), 10
+        )
         hz = max(float(self.get_parameter("publish_hz").value), 1.0)
         self.create_timer(1.0 / hz, self._tick)
 
         self._last_depth: Optional[np.ndarray] = None
         self._odom_xy: Optional[Tuple[float, float]] = None
-        self._progress_anchor_xy: Optional[Tuple[float, float]] = None
-        self._progress_anchor_t = time.monotonic()
-        self._stuck_turn_t0: Optional[float] = None
-        self._dbg_last_t = 0.0
-        self._warn_no_depth = False
+        self._anchor_xy: Optional[Tuple[float, float]] = None
+        self._anchor_t = time.monotonic()
+        self._progress_m = 0.0
 
         self._state = _State.FORWARD
         self._reason = "init"
         self._phase_until = 0.0
         self._recovery_wz = 0.0
-        self._turn_sign = 1.0  # +1 = CCW (left)
+        self._turn_sign = 1.0
+        self._turn_phase_t0: Optional[float] = None
+        self._last_cmd_mag = 0.0
+        self._dbg_last_t = 0.0
+        self._warn_no_depth = False
 
-        self._last_front = float("nan")
-        self._last_left = float("nan")
-        self._last_right = float("nan")
+        self._band_turn = False
+        self._band_slow = False
 
     def _depth_cb(self, msg: Image) -> None:
         d = _decode_depth(msg)
@@ -162,123 +156,119 @@ class SimpleDepthAvoidanceNode(Node):
 
     def _odom_cb(self, msg: Odometry) -> None:
         p = msg.pose.pose.position
-        self._odom_xy = (float(p.x), float(p.y))
+        xy = (float(p.x), float(p.y))
+        if self._anchor_xy is None:
+            self._anchor_xy = xy
+            self._anchor_t = time.monotonic()
+        self._odom_xy = xy
 
     def _tick(self) -> None:
         now = time.monotonic()
         p = self._params()
-        twist = Twist()
-        reason = self._reason
+        self._update_progress(now, p)
 
         front, left, right, valid = self._measure_regions(p)
-        self._last_front, self._last_left, self._last_right = front, left, right
+        twist, reason = self._control_step(now, p, front, left, right, valid)
+        cmd_mag = abs(twist.linear.x) + abs(twist.angular.z)
 
-        if self._check_position_stuck(now, p):
-            self._begin_recovery(now, p, front, left, right, reason="position_stuck")
+        if self._should_recover_stuck(now, p, cmd_mag, front, left, right):
+            twist.linear.x = p["v_rev"]
+            twist.angular.z = 0.0
+            reason = "position_stuck_recovery"
 
-        # Timed REVERSE phase
+        self._last_cmd_mag = cmd_mag
+        self._publish_and_log(now, p, twist, front, left, right, reason)
+
+    def _control_step(
+        self,
+        now: float,
+        p: dict,
+        front: float,
+        left: float,
+        right: float,
+        valid: bool,
+    ) -> Tuple[Twist, str]:
+        twist = Twist()
+
         if self._state == _State.REVERSE:
             if now < self._phase_until:
                 twist.linear.x = p["v_rev"]
-                twist.angular.z = 0.0
-                reason = "critical_reverse"
-            else:
-                self._state = _State.RECOVERY_TURN
-                self._phase_until = now + p["recovery_turn_time_s"]
-                self._recovery_wz = self._freer_turn_wz(p, left, right)
-                twist.linear.x = 0.0
-                twist.angular.z = self._recovery_wz
-                reason = "recovery_turn_after_reverse"
-            self._publish_and_log(now, p, twist, front, left, right, reason)
-            return
+                return twist, "critical_reverse"
+            self._state = _State.RECOVERY_TURN
+            self._phase_until = now + p["recovery_turn_time_s"]
+            self._recovery_wz = self._freer_wz(p, left, right)
+            self._turn_phase_t0 = None
 
-        # RECOVERY_TURN phase (timed + exit early if front opens)
         if self._state == _State.RECOVERY_TURN:
-            done_time = now >= self._phase_until
-            front_ok = valid and front > p["safe"]
-            if not (done_time or front_ok):
-                twist.linear.x = 0.0
+            if now < self._phase_until and not (valid and front > p["safe"]):
                 twist.angular.z = self._recovery_wz
-                reason = "recovery_turn"
-                self._publish_and_log(now, p, twist, front, left, right, reason)
-                return
+                return twist, "recovery_turn"
             self._state = _State.SLOW_FORWARD if valid and front > p["critical"] else _State.FORWARD
-            self._stuck_turn_t0 = None
-            self._reset_progress_anchor(now)
-
-        # Turn-stuck: spinning too long without progress
-        if self._state in (_State.TURN_LEFT, _State.TURN_RIGHT):
-            if self._stuck_turn_t0 is None:
-                self._stuck_turn_t0 = now
-            elif (now - self._stuck_turn_t0) >= p["stuck_timeout_s"]:
-                self._turn_sign *= -1.0
-                self._begin_recovery(now, p, front, left, right, reason="turn_timeout_recovery")
-                twist.linear.x = 0.0
-                twist.angular.z = self._recovery_wz
-                self._publish_and_log(now, p, twist, front, left, right, "turn_timeout_recovery")
-                return
-        else:
-            self._stuck_turn_t0 = None
+            self._turn_phase_t0 = None
+            self._reset_anchor(now)
 
         if not valid:
-            self._state = _State.TURN_LEFT
-            twist.linear.x = 0.0
+            self._state = _State.SEARCH_TURN
+            self._band_turn = False
+            self._band_slow = False
             twist.angular.z = p["w_search"] * self._turn_sign
-            reason = "NO_VALID_DEPTH_SEARCH_TURN"
-            self._publish_and_log(now, p, twist, front, left, right, reason)
-            return
+            return twist, "no_valid_depth"
+
+        self._update_bands(front, p)
 
         if front < p["critical"]:
-            self._state = _State.REVERSE
-            self._phase_until = now + p["reverse_time_s"]
+            self._start_reverse(now, p, left, right)
             twist.linear.x = p["v_rev"]
-            twist.angular.z = 0.0
-            reason = "critical_too_close_reverse"
-            self._publish_and_log(now, p, twist, front, left, right, reason)
-            return
+            return twist, "critical_too_close_reverse"
 
-        if front < p["safe"]:
-            self._turn_sign = self._freer_turn_sign(left, right)
+        if self._band_turn or front < p["safe"]:
+            self._turn_sign = self._freer_sign(left, right)
             self._state = _State.TURN_LEFT if self._turn_sign > 0 else _State.TURN_RIGHT
-            twist.linear.x = 0.0
+            if self._turn_phase_t0 is None:
+                self._turn_phase_t0 = now
+            elif (now - self._turn_phase_t0) >= p["stuck_timeout_s"]:
+                self._turn_sign *= -1.0
+                self._start_reverse(now, p, left, right)
+                twist.linear.x = p["v_rev"]
+                return twist, "turn_timeout_recovery"
             twist.angular.z = self._turn_sign * p["w_turn"]
-            reason = "front_blocked_turn_to_freer_side"
-            self._publish_and_log(now, p, twist, front, left, right, reason)
-            return
+            return twist, "front_blocked_turn_to_freer_side"
 
-        if front < p["clear"]:
+        self._turn_phase_t0 = None
+
+        if self._band_slow or front < p["clear"]:
             self._state = _State.SLOW_FORWARD
             twist.linear.x = p["v_slow"]
-            twist.angular.z = self._slow_steer_wz(p, left, right)
-            reason = "caution_slow_forward"
-            self._publish_and_log(now, p, twist, front, left, right, reason)
-            return
+            twist.angular.z = self._slow_steer(p, left, right)
+            return twist, "cautious_forward"
 
         self._state = _State.FORWARD
+        self._band_slow = False
+        self._band_turn = False
         twist.linear.x = p["v_fwd"]
-        twist.angular.z = 0.0
-        reason = "path_clear_forward"
-        self._reset_progress_anchor(now)
-        self._publish_and_log(now, p, twist, front, left, right, reason)
+        self._reset_anchor(now)
+        return twist, "clear_forward"
 
     def _params(self) -> dict:
-        stuck_s = float(self.get_parameter("stuck_timeout_s").value)
         return {
             "safe": float(self.get_parameter("safe_distance_m").value),
             "critical": float(self.get_parameter("critical_distance_m").value),
             "clear": float(self.get_parameter("clear_distance_m").value),
+            "hyst": float(self.get_parameter("distance_hysteresis_m").value),
             "v_fwd": float(self.get_parameter("forward_speed_m_s").value),
             "v_slow": float(self.get_parameter("slow_forward_speed_m_s").value),
             "w_turn": float(self.get_parameter("turn_speed_rad_s").value),
             "w_search": float(self.get_parameter("search_turn_speed_rad_s").value),
-            "vmax": float(self.get_parameter("max_range_m").value),
-            "stuck_timeout_s": max(stuck_s, 0.5),
-            "reverse_time_s": max(float(self.get_parameter("reverse_time_s").value), 0.1),
             "v_rev": min(float(self.get_parameter("reverse_speed_m_s").value), -1e-6),
-            "stuck_progress_m": float(self.get_parameter("stuck_progress_m").value),
-            "recovery_turn_time_s": max(float(self.get_parameter("recovery_turn_time_s").value), 0.3),
-            "slow_steer_gain": float(self.get_parameter("slow_steer_gain").value),
+            "reverse_time_s": max(float(self.get_parameter("reverse_time_s").value), 0.1),
+            "recovery_turn_time_s": max(
+                float(self.get_parameter("recovery_turn_time_s").value), 0.3
+            ),
+            "stuck_timeout_s": max(float(self.get_parameter("stuck_timeout_s").value), 0.5),
+            "progress_eps": max(float(self.get_parameter("progress_epsilon_m").value), 1e-4),
+            "vmax": float(self.get_parameter("max_range_m").value),
             "pct": float(self.get_parameter("depth_percentile").value),
+            "slow_steer_gain": float(self.get_parameter("slow_steer_gain").value),
             "rs": float(self.get_parameter("roi_row_frac_min").value),
             "re": float(self.get_parameter("roi_row_frac_max").value),
             "cc0": float(self.get_parameter("roi_col_frac_center_min").value),
@@ -296,7 +286,7 @@ class SimpleDepthAvoidanceNode(Node):
         if d is None:
             if not self._warn_no_depth:
                 self._warn_no_depth = True
-                self.get_logger().warn("No depth frame yet on %s" % self._depth_topic)
+                self.get_logger().warn("No depth on %s yet" % self._depth_topic)
             return float("nan"), float("nan"), float("nan"), False
 
         h, w = d.shape[:2]
@@ -306,69 +296,93 @@ class SimpleDepthAvoidanceNode(Node):
         _, _, rc0, rc1 = _frac_window(h, w, p["rs"], p["re"], p["rc0"], p["rc1"])
 
         front, nf = _robust_distance(d[r0:r1, cc0:cc1], p["vmax"], p["pct"])
-        left, nl = _robust_distance(d[r0:r1, lc0:lc1], p["vmax"], p["pct"])
-        right, nr = _robust_distance(d[r0:r1, rc0:rc1], p["vmax"], p["pct"])
-        valid = nf > 0 and np.isfinite(front)
+        left, _ = _robust_distance(d[r0:r1, lc0:lc1], p["vmax"], p["pct"])
+        right, _ = _robust_distance(d[r0:r1, rc0:rc1], p["vmax"], p["pct"])
         if not np.isfinite(left):
             left = front
         if not np.isfinite(right):
             right = front
+        valid = nf > 0 and np.isfinite(front)
         return front, left, right, valid
 
-    def _freer_turn_sign(self, d_left: float, d_right: float) -> float:
+    def _update_bands(self, front: float, p: dict) -> None:
+        h = p["hyst"]
+        if self._band_turn:
+            if front > p["safe"] + h:
+                self._band_turn = False
+        elif front < p["safe"]:
+            self._band_turn = True
+
+        if self._band_slow:
+            if front > p["clear"] + h:
+                self._band_slow = False
+        elif front < p["clear"]:
+            self._band_slow = True
+
+    def _freer_sign(self, d_left: float, d_right: float) -> float:
         if np.isfinite(d_left) and np.isfinite(d_right):
-            if d_left > d_right + 0.05:
+            if d_left > d_right + 0.04:
                 return 1.0
-            if d_right > d_left + 0.05:
+            if d_right > d_left + 0.04:
                 return -1.0
         return self._turn_sign
 
-    def _freer_turn_wz(self, p: dict, d_left: float, d_right: float) -> float:
-        return self._freer_turn_sign(d_left, d_right) * p["w_turn"]
+    def _freer_wz(self, p: dict, d_left: float, d_right: float) -> float:
+        return self._freer_sign(d_left, d_right) * p["w_turn"]
 
-    def _slow_steer_wz(self, p: dict, d_left: float, d_right: float) -> float:
+    def _slow_steer(self, p: dict, d_left: float, d_right: float) -> float:
         if not (np.isfinite(d_left) and np.isfinite(d_right)):
             return 0.0
         err = float(np.clip(d_right - d_left, -1.0, 1.0))
         return float(np.clip(err * p["slow_steer_gain"] * p["w_turn"], -p["w_turn"], p["w_turn"]))
 
-    def _reset_progress_anchor(self, now: float) -> None:
+    def _reset_anchor(self, now: float) -> None:
         if self._odom_xy is not None:
-            self._progress_anchor_xy = self._odom_xy
-            self._progress_anchor_t = now
+            self._anchor_xy = self._odom_xy
+            self._anchor_t = now
+            self._progress_m = 0.0
 
-    def _check_position_stuck(self, now: float, p: dict) -> bool:
-        if self._odom_xy is None or self._progress_anchor_xy is None:
-            return False
-        dx = self._odom_xy[0] - self._progress_anchor_xy[0]
-        dy = self._odom_xy[1] - self._progress_anchor_xy[1]
-        dist = math.hypot(dx, dy)
-        if dist >= p["stuck_progress_m"]:
-            self._progress_anchor_xy = self._odom_xy
-            self._progress_anchor_t = now
-            return False
-        if (now - self._progress_anchor_t) < p["stuck_timeout_s"]:
-            return False
-        if self._state in (_State.FORWARD, _State.STOP):
-            return False
-        return True
+    def _update_progress(self, now: float, p: dict) -> None:
+        if self._odom_xy is None or self._anchor_xy is None:
+            self._progress_m = 0.0
+            return
+        self._progress_m = math.hypot(
+            self._odom_xy[0] - self._anchor_xy[0], self._odom_xy[1] - self._anchor_xy[1]
+        )
+        if self._progress_m >= p["progress_eps"]:
+            self._anchor_xy = self._odom_xy
+            self._anchor_t = now
+            self._progress_m = 0.0
 
-    def _begin_recovery(
+    def _should_recover_stuck(
         self,
         now: float,
         p: dict,
+        cmd_mag: float,
         front: float,
         left: float,
         right: float,
-        reason: str,
-    ) -> None:
+    ) -> bool:
+        if self._state in (_State.REVERSE, _State.RECOVERY_TURN):
+            return False
+        if self._odom_xy is None or self._anchor_xy is None:
+            return False
+        if cmd_mag < 0.02:
+            return False
+        if self._progress_m >= p["progress_eps"]:
+            return False
+        if (now - self._anchor_t) < p["stuck_timeout_s"]:
+            return False
         self._turn_sign *= -1.0
+        self._start_reverse(now, p, left, right)
+        return True
+
+    def _start_reverse(self, now: float, p: dict, left: float, right: float) -> None:
         self._state = _State.REVERSE
         self._phase_until = now + p["reverse_time_s"]
-        self._recovery_wz = self._freer_turn_wz(p, left, right)
-        self._reason = reason
-        self._stuck_turn_t0 = None
-        self._reset_progress_anchor(now)
+        self._recovery_wz = self._freer_wz(p, left, right)
+        self._turn_phase_t0 = None
+        self._reset_anchor(now)
 
     def _publish_and_log(
         self,
@@ -389,14 +403,16 @@ class SimpleDepthAvoidanceNode(Node):
         lf = "%.2f" % left if np.isfinite(left) else "nan"
         rf = "%.2f" % right if np.isfinite(right) else "nan"
         self.get_logger().info(
-            "[avoidance] state=%s front=%s left=%s right=%s cmd=(%.3f,%.3f) reason=%s"
+            "[avoidance] state=%s front=%s left=%s right=%s "
+            "cmd_linear=%.3f cmd_angular=%.3f progress=%.3f reason=%s"
             % (
-                _state_name(self._state),
+                self._state.name,
                 ff,
                 lf,
                 rf,
                 twist.linear.x,
                 twist.angular.z,
+                self._progress_m,
                 reason,
             )
         )
