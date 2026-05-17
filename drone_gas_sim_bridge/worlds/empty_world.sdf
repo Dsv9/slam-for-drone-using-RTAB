@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <!--
-  Senior-project demo world — reliable reactive avoidance only.
-  Spawn: (-2.0, -3.05), forward +X. Drive lane center y=-3.05, ~1.6 m clear width (y in [-3.85, -2.25]).
-  First 1.2 m along +X from spawn: no collision props (clear spawn zone ends ~x=-0.8).
-  Four separated avoidance boxes, staggered L/R, >= ~1.2 m between collision surfaces.
+  VO + avoidance demo world.
+  Spawn: (-3.5, -3.05), forward +X. vo_calib_wall ahead (visual-only) for rgbd_odometry features.
+  Drive lane y=-3.05 (~1.6 m clear). First 1.2 m +X: no collision (clear zone ends ~x=-2.3).
+  Four separated avoidance boxes, staggered L/R, >= ~1.2 m between surfaces.
 -->
 <sdf version="1.9">
   <world name="default">
@@ -190,10 +190,68 @@
     </model>
 
     <!-- clear spawn zone -->
-    <!-- No models with collision west of x≈-0.8 (1.2 m open +X from spawn at x=-2.0). -->
+    <!-- No collision west of x≈-2.3 (1.2 m open +X from spawn at x=-3.5). -->
 
     <!-- main demo corridor -->
-    <!-- Centerline y=-3.05; keep collision out of y∈[-3.85,-2.25] (~1.6 m). Props only north/south of band. -->
+    <!-- Centerline y=-3.05; collision kept out of y∈[-3.85,-2.25] (~1.6 m free width). -->
+
+    <!-- RTAB visual feature — forward calibration wall (visual only, no collision; faces spawn +X) -->
+    <model name="vo_calib_wall">
+      <static>true</static>
+      <pose>0.15 -3.05 1.05 0 0 0</pose>
+      <link name="link">
+        <visual name="t00"><pose>-0.75 0.75 0 0 0 0</pose><geometry><box><size>0.48 0.48 0.04</size></box></geometry>
+          <material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0.05 0.05 0.05 1</diffuse></material></visual>
+        <visual name="t01"><pose>-0.25 0.75 0 0 0 0</pose><geometry><box><size>0.48 0.48 0.04</size></box></geometry>
+          <material><ambient>0.92 0.92 0.95 1</ambient><diffuse>0.92 0.92 0.95 1</diffuse></material></visual>
+        <visual name="t02"><pose>0.25 0.75 0 0 0 0</pose><geometry><box><size>0.48 0.48 0.04</size></box></geometry>
+          <material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0.05 0.05 0.05 1</diffuse></material></visual>
+        <visual name="t03"><pose>0.75 0.75 0 0 0 0</pose><geometry><box><size>0.48 0.48 0.04</size></box></geometry>
+          <material><ambient>0.92 0.92 0.95 1</ambient><diffuse>0.92 0.92 0.95 1</diffuse></material></visual>
+        <visual name="t10"><pose>-0.75 0.25 0 0 0 0</pose><geometry><box><size>0.48 0.48 0.04</size></box></geometry>
+          <material><ambient>0.92 0.92 0.95 1</ambient><diffuse>0.92 0.92 0.95 1</diffuse></material></visual>
+        <visual name="t11"><pose>-0.25 0.25 0 0 0 0</pose><geometry><box><size>0.48 0.48 0.04</size></box></geometry>
+          <material><ambient>0.95 0.25 0.35 1</ambient><diffuse>0.95 0.25 0.35 1</diffuse></material></visual>
+        <visual name="t12"><pose>0.25 0.25 0 0 0 0</pose><geometry><box><size>0.48 0.48 0.04</size></box></geometry>
+          <material><ambient>0.35 0.85 0.35 1</ambient><diffuse>0.35 0.85 0.35 1</diffuse></material></visual>
+        <visual name="t13"><pose>0.75 0.25 0 0 0 0</pose><geometry><box><size>0.48 0.48 0.04</size></box></geometry>
+          <material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0.05 0.05 0.05 1</diffuse></material></visual>
+        <visual name="t20"><pose>-0.75 -0.25 0 0 0 0</pose><geometry><box><size>0.48 0.48 0.04</size></box></geometry>
+          <material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0.05 0.05 0.05 1</diffuse></material></visual>
+        <visual name="t21"><pose>-0.25 -0.25 0 0 0 0</pose><geometry><box><size>0.48 0.48 0.04</size></box></geometry>
+          <material><ambient>0.25 0.55 0.95 1</ambient><diffuse>0.25 0.55 0.95 1</diffuse></material></visual>
+        <visual name="t22"><pose>0.25 -0.25 0 0 0 0</pose><geometry><box><size>0.48 0.48 0.04</size></box></geometry>
+          <material><ambient>0.92 0.92 0.95 1</ambient><diffuse>0.92 0.92 0.95 1</diffuse></material></visual>
+        <visual name="t23"><pose>0.75 -0.25 0 0 0 0</pose><geometry><box><size>0.48 0.48 0.04</size></box></geometry>
+          <material><ambient>0.85 0.55 0.15 1</ambient><diffuse>0.85 0.55 0.15 1</diffuse></material></visual>
+        <visual name="t30"><pose>-0.75 -0.75 0 0 0 0</pose><geometry><box><size>0.48 0.48 0.04</size></box></geometry>
+          <material><ambient>0.92 0.92 0.95 1</ambient><diffuse>0.92 0.92 0.95 1</diffuse></material></visual>
+        <visual name="t31"><pose>-0.25 -0.75 0 0 0 0</pose><geometry><box><size>0.48 0.48 0.04</size></box></geometry>
+          <material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0.05 0.05 0.05 1</diffuse></material></visual>
+        <visual name="t32"><pose>0.25 -0.75 0 0 0 0</pose><geometry><box><size>0.48 0.48 0.04</size></box></geometry>
+          <material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0.05 0.05 0.05 1</diffuse></material></visual>
+        <visual name="t33"><pose>0.75 -0.75 0 0 0 0</pose><geometry><box><size>0.48 0.48 0.04</size></box></geometry>
+          <material><ambient>0.92 0.92 0.95 1</ambient><diffuse>0.92 0.92 0.95 1</diffuse></material></visual>
+      </link>
+    </model>
+
+    <!-- RTAB visual feature — side panels (visual only, outside corridor) -->
+    <model name="vo_side_panel_L">
+      <static>true</static>
+      <pose>-1.2 -1.55 0.85 0 0 0.35</pose>
+      <link name="link">
+        <visual name="v"><geometry><box><size>0.04 0.35 0.9</size></box></geometry>
+          <material><ambient>0.9 0.15 0.15 1</ambient><diffuse>0.9 0.15 0.15 1</diffuse></material></visual>
+      </link>
+    </model>
+    <model name="vo_side_panel_R">
+      <static>true</static>
+      <pose>-1.2 -4.55 0.85 0 0 -0.35</pose>
+      <link name="link">
+        <visual name="v"><geometry><box><size>0.04 0.35 0.9</size></box></geometry>
+          <material><ambient>0.15 0.35 0.92 1</ambient><diffuse>0.15 0.35 0.92 1</diffuse></material></visual>
+      </link>
+    </model>
 
     <!-- RTAB visual feature — patterned board on north wall (away from drive lane) -->
     <model name="vo_taglike">

@@ -1,5 +1,5 @@
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, GroupAction, IncludeLaunchDescription, TimerAction
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PythonExpression
@@ -15,25 +15,45 @@ def generate_launch_description():
     gazebo_twist_topic = LaunchConfiguration("gazebo_twist_topic")
     enable_exploration = LaunchConfiguration("enable_exploration")
     enable_avoidance = LaunchConfiguration("enable_avoidance")
+    enable_rtabmap = LaunchConfiguration("enable_rtabmap")
+    enable_rviz = LaunchConfiguration("enable_rviz")
+    debug_odom = LaunchConfiguration("debug_odom")
+
+    rtabmap_delayed = GroupAction(
+        condition=IfCondition(enable_rtabmap),
+        actions=[
+            TimerAction(
+                period=4.0,
+                actions=[
+                    IncludeLaunchDescription(
+                        PythonLaunchDescriptionSource(
+                            os.path.join(pkg_core, "launch", "rtabmap_rgbd.launch.py")
+                        ),
+                        launch_arguments={
+                            "use_sim_time": "true",
+                            "rgb_topic": "/rgbd_camera/image",
+                            "depth_topic": "/rgbd_camera/depth_image",
+                            "camera_info_topic": "/rgbd_camera/camera_info",
+                            "debug_odom": debug_odom,
+                            "enable_rtabmap_viz": "true",
+                        }.items(),
+                    )
+                ],
+            )
+        ],
+    )
+
     return LaunchDescription(
         [
-            # Frame chain for simulation SLAM:
-            #   odom -> base_link -> rgbd_camera
-            # Gazebo camera message headers are currently using:
-            #   simple_drone/base_link/rgbd_camera
-            # We publish a static alias tf to that exact frame so RTAB-Map and RViz
-            # can transform camera data consistently without changing topic names.
-            #
-            # RViz fixed frame should start as base_link or odom while map is not yet
-            # being published/initialized. Using map too early causes filter drops.
+            # Frame chain: odom -> base_link -> rgbd_camera (+ Gazebo alias frame).
             DeclareLaunchArgument("start_bridge", default_value="true"),
             DeclareLaunchArgument("gazebo_twist_topic", default_value="/cmd_vel"),
-            # Exploration fights VO smoke tests — enable only for full demo.
             DeclareLaunchArgument("enable_exploration", default_value="false"),
-            # Optional depth-based creep + turn-away (see simple_depth_avoidance_node.py).
-            # When true: exploration_controller is OFF unless you bypass this expression.
             DeclareLaunchArgument("enable_avoidance", default_value="false"),
-            # --- simple_depth_avoidance_node tuning (only used when enable_avoidance:=true) ---
+            DeclareLaunchArgument("enable_rtabmap", default_value="true"),
+            DeclareLaunchArgument("enable_rviz", default_value="true"),
+            DeclareLaunchArgument("debug_odom", default_value="true"),
+            # --- simple_depth_avoidance_node tuning (only when enable_avoidance:=true) ---
             DeclareLaunchArgument("safe_distance_m", default_value="0.35"),
             DeclareLaunchArgument("forward_speed_m_s", default_value="0.025"),
             DeclareLaunchArgument("turn_speed_rad_s", default_value="0.22"),
@@ -46,7 +66,6 @@ def generate_launch_description():
             DeclareLaunchArgument("no_reading_forward_m_s", default_value="0.008"),
             DeclareLaunchArgument("debug_avoidance", default_value="false"),
             DeclareLaunchArgument("debug_avoidance_period_sec", default_value="1.0"),
-            # --- timed avoid burst + escape (simple_depth_avoidance_node) ---
             DeclareLaunchArgument("avoid_turn_duration_sec", default_value="1.2"),
             DeclareLaunchArgument("stuck_timeout_sec", default_value="4.0"),
             DeclareLaunchArgument("reverse_speed_m_s", default_value="-0.015"),
@@ -68,22 +87,13 @@ def generate_launch_description():
                     )
                 )
             ),
-            IncludeLaunchDescription(
-                PythonLaunchDescriptionSource(
-                    os.path.join(pkg_core, "launch", "rtabmap_rgbd.launch.py")
-                ),
-                launch_arguments={
-                    "use_sim_time": "true",
-                    "rgb_topic": "/rgbd_camera/image",
-                    "depth_topic": "/rgbd_camera/depth_image",
-                    "camera_info_topic": "/rgbd_camera/camera_info",
-                }.items(),
-            ),
+            rtabmap_delayed,
             Node(
                 package="rviz2",
                 executable="rviz2",
                 name="rviz2",
                 output="screen",
+                condition=IfCondition(enable_rviz),
                 arguments=[
                     "-d",
                     os.path.join(pkg_core, "rviz", "drone_gas_core.rviz"),
@@ -95,8 +105,6 @@ def generate_launch_description():
                 executable="static_transform_publisher",
                 name="rgbd_camera_static_tf",
                 output="screen",
-                # Must match RGBD sensor pose in drone_gas_sim_bridge/models/simple_drone/model.sdf
-                # Match model.sdf camera pose: x y z yaw pitch roll (see Gazebo sdf rpy).
                 arguments=[
                     "0.30",
                     "0",
@@ -155,9 +163,9 @@ def generate_launch_description():
                     PythonExpression(
                         [
                             "'",
-                            LaunchConfiguration("enable_exploration"),
+                            enable_exploration,
                             "' == 'true' and '",
-                            LaunchConfiguration("enable_avoidance"),
+                            enable_avoidance,
                             "' != 'true'",
                         ]
                     )
@@ -229,8 +237,6 @@ def generate_launch_description():
                 parameters=[
                     os.path.join(pkg_core, "config", "cmd_vel_watchdog.yaml"),
                     {
-                        # Allow slow open-loop motion before rgbd_odometry publishes valid odom
-                        # (exploration + smoke tests). Set true for hardware safety if repurpose.
                         "require_odom": False,
                         "debug_print_cmd_vel": False,
                         "use_sim_time": True,

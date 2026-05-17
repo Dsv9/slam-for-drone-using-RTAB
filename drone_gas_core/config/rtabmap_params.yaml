@@ -1,7 +1,4 @@
-# Namespaced mirrors of rgbd_odometry tuning (manual load / tooling only).
-#
-# VO tuning for sim is authoritative in launch/rtabmap_rgbd.launch.py (odom_args).
-# Comments there explain EstimationType=0 vs PnP (type=1).
+# Reference mirror of launch/rtabmap_rgbd.launch.py (odom_args / rtabmap_args are authoritative).
 
 rtabmap:
   rgbd_odometry:
@@ -13,24 +10,21 @@ rtabmap:
       approx_sync: true
       topic_queue_size: 50
       sync_queue_size: 50
-      approx_sync_max_interval: 0.35
+      approx_sync_max_interval: 0.10
       qos_image: 2
       qos_camera_info: 2
       Vis/EstimationType: "0"
-      Vis/MinInliers: "8"
-      Vis/MaxFeatures: "8000"
-      Kp/MaxFeatures: "8000"
-      Vis/InlierDistance: "0.52"
-      Vis/PnPReprojError: "10"
-      Vis/CorNNDR: "0.82"
-      Vis/MinDepth: "0.25"
+      Vis/MinInliers: "5"
+      Vis/MaxFeatures: "1000"
+      Kp/MaxFeatures: "1000"
+      Vis/InlierDistance: "0.55"
+      Vis/CorNNDR: "0.80"
+      Vis/MinDepth: "0.20"
       Vis/MaxDepth: "8"
-      Kp/MinDepth: "0.2"
-      Kp/MaxDepth: "8"
-      Vis/MinFeatures: "6"
-      GFTT/MinDistance: "1"
+      GFTT/MinDistance: "3"
       Reg/Force3DoF: "true"
       Odom/ImageDecimation: "1"
+      Odom/ResetCountdown: "1"
 
   rtabmap:
     ros__parameters:
@@ -41,7 +35,7 @@ rtabmap:
       approx_sync: true
       topic_queue_size: 50
       sync_queue_size: 50
-      approx_sync_max_interval: 0.35
+      approx_sync_max_interval: 0.10
       qos_image: 2
       qos_camera_info: 2
       RGBD/LinearUpdate: "0.02"

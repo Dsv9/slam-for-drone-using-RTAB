@@ -1,98 +1,88 @@
 Visual odometry / SLAM demo (ROS 2 Jazzy + Gazebo Harmonic)
 
+Priority order (do not skip steps)
+--------------------------------
+1. Stable /rgbd_camera/* streams (~8-10 Hz).
+2. rgbd_odometry inliers > 0 and /rtabmap/odom quality > 0.
+3. RTAB-Map accepts images (no “no odometry is provided”).
+4. Only then enable avoidance / exploration.
+
 Prerequisites
 -------------
-After build: source install/setup.bash
+  cd ~/ros2_ws
+  source /opt/ros/jazzy/setup.bash
+  colcon build --symlink-install --packages-select drone_gas_core drone_gas_sim_bridge
+  source install/setup.bash
 
-Odometry tuning is applied via odom_args in drone_gas_core/launch/rtabmap_rgbd.launch.py.
+Odometry tuning lives in launch/rtabmap_rgbd.launch.py (odom_args + rtabmap_args).
+Key: Vis/EstimationType=0 (3D-3D). Type=1 (PnP) often gives “matches>0 but 0 inliers” in Gazebo.
 
-If you still see matches but geometric inliers stay at 0, check rgbd_odometry was launched
-with Vis/EstimationType=0 (3D→3D). RTAB‘s default EstimationType=1 is PnP; Vis/InlierDistance
-mostly affects type 0, so tuning InlierDistance alone while type=1 is still PnP can look like
-“nothing changes.”
+Odom-only test (no auto motion)
+-------------------------------
+  ros2 launch drone_gas_core full_system.launch.py \
+    enable_avoidance:=false \
+    enable_exploration:=false \
+    enable_rtabmap:=true \
+    enable_rviz:=true \
+    debug_odom:=true
 
-(stock rtabmap.launch.py does not honor an arbitrary YAML params_file for these nodes.)
+With avoidance/exploration off, nothing publishes /drone/cmd_vel unless you run a separate node.
 
-Mapping vs odometry order
--------------------------
-RTAB-Map discards images until /rtabmap/odom is valid (quality > 0). There is nothing extra to
-delay in launch: fixing rgbd_odometry fixes mapping automatically.
+Optional slow creep to build parallax (after streams are stable; one cmd_vel publisher only):
+  ros2 run drone_gas_core visual_odometry_smoke_motion --ros-args -p linear_x:=0.02
 
-Bring-up (single cmd_vel publisher)
------------------------------------
-  ros2 launch drone_gas_core full_system.launch.py
+Full demo (after /rtabmap/odom works)
+------------------------------------
+  ros2 launch drone_gas_core full_system.launch.py \
+    enable_avoidance:=true \
+    enable_exploration:=false \
+    debug_odom:=true
 
-Exploration publishes /drone/cmd_vel too — keep it off for VO tests:
-  # enable_exploration defaults to false
-  ros2 launch drone_gas_core full_system.launch.py enable_exploration:=false
+Debug script (second terminal)
+------------------------------
+  source /opt/ros/jazzy/setup.bash
+  source ~/ros2_ws/install/setup.bash
+  bash $(ros2 pkg prefix drone_gas_core)/share/drone_gas_core/scripts/check_rgbd_odom.sh
 
-Slow motion (+ optional yaw scan after odom_info inliers gate)
---------------------------------------------------------------
-  ros2 run drone_gas_core visual_odometry_smoke_motion
-
-Optional overrides example:
-  ros2 run drone_gas_core visual_odometry_smoke_motion --ros-args \\
-    -p linear_x:=0.03 -p scan_min_inliers:=15 -p scan_wait_timeout_sec:=30.0
-
-Topic / TF checks
------------------
+Manual checks
+-------------
+  ros2 topic list | grep rgbd
   ros2 topic hz /rgbd_camera/image
   ros2 topic hz /rgbd_camera/depth_image
-  ros2 topic hz /rgbd_camera/points
+  ros2 topic hz /rgbd_camera/camera_info
   ros2 topic hz /rtabmap/odom
+  ros2 topic echo /rtabmap/odom --once
   ros2 topic echo /rtabmap/odom_info --field inliers
+  ros2 run tf2_ros tf2_echo odom base_link
   ros2 run tf2_ros tf2_echo base_link rgbd_camera
 
-Success criteria (VO / SLAM)
-----------------------------
-• /rtabmap/odom_info inliers climbs and stays largely above ~10–20 once the drone creeps forward.
-• /rtabmap/odom publishes; RTAB GUI / logs show periodic Odom quality > 0, not permanently 0.
-• Log spam “Not enough inliers 0/20” should stop once rgbd_odometry sees Vis/MinInliers via odom_args (not the default 20).
-• RViz: enable Path on /rtabmap/odom (or inspect map/cloud) once TF odom→base_link is live.
-• RGB-D topics must remain: /rgbd_camera/image , /rgbd_camera/depth_image ,
-  /rgbd_camera/camera_info , /rgbd_camera/points (do not rename).
+Expected results
+----------------
+• /rgbd_camera/image, depth_image, camera_info: ~8-10 Hz (not 0, not long gaps).
+• /rtabmap/odom: continuous once VO locks (project uses namespace rtabmap, not bare /odom).
+• /rtabmap/odom_info inliers: often > 5-10 while moving slowly; not stuck at 0 forever.
+• rgbd_odometry: Odom quality > 0; no endless “Not enough inliers 0/8”.
+• RTAB-Map: stops printing “no odometry is provided. Image is ignored.”
+• RViz: map / cloud grows after valid odom.
 
-Optional 2D depth avoidance (demo only)
----------------------------------------
-Rebuild and source workspace as usual, then launch with avoidance on:
+If RGB/depth warnings at startup
+--------------------------------
+full_system delays RTAB-Map ~4 s so Gazebo + ros_gz_bridge can publish first.
+Wait ~10 s after launch before judging hz.
 
-  colcon build --packages-select drone_gas_core
-  source install/setup.bash
-  ros2 launch drone_gas_core full_system.launch.py enable_avoidance:=true enable_exploration:=false
+TF / frames
+-----------
+  base_link -> rgbd_camera (static TF in full_system.launch.py)
+  rgbd_camera -> simple_drone/base_link/rgbd_camera (alias for Gazebo headers)
+  odom -> base_link (from rgbd_odometry when publish_tf_odom:=true)
 
-Tune avoidance from launch (examples):
-  ros2 launch drone_gas_core full_system.launch.py enable_avoidance:=true enable_exploration:=false \\
-    safe_distance_m:=0.35 forward_speed_m_s:=0.025 turn_speed_rad_s:=0.22 \\
-    max_range_m:=3.0 no_reading_forward_m_s:=0.008 avoid_turn_duration_sec:=1.2 \\
-    reverse_speed_m_s:=-0.015 reverse_duration_sec:=1.0 escape_turn_duration_sec:=1.5 \\
-    stuck_timeout_sec:=4.0 roi_row_frac_min:=0.18 roi_row_frac_max:=0.42 \\
-    roi_col_frac_min:=0.40 roi_col_frac_max:=0.60 debug_avoidance:=true
+Troubleshooting
+---------------
+• 0 inliers: wrong EstimationType, textureless view, or RGB-D not synced — check odom_args and world vo_calib_wall.
+• Images ignored: /rtabmap/odom missing or quality=0 — fix VO before tuning mapping.
+• Low Hz: Gazebo CPU; camera update_rate is 10 in model.sdf; close extra apps.
+• Old world in sim: colcon build drone_gas_sim_bridge and restart Gazebo completely.
 
-Checks:
-  ros2 topic echo /drone/cmd_vel           # Twist from simple_depth_avoidance_node → watchdog → bridge
-  ros2 topic hz /drone/cmd_vel
-
-Rules:
-• Do NOT run visual_odometry_smoke_motion.py at the same time (two publishers on /drone/cmd_vel).
-• Exploration is suppressed automatically whenever enable_avoidance:=true, even if
-  enable_exploration:=true, so avoidance wins for a single-driver demo.
-
-Tune (optional ros2 params on simple_depth_avoidance_node): safe_distance_m, forward_speed_m_s,
-turn_speed_rad_s, roi_* fractions for front window.
-
-Timed avoidance + escape (same launch file): avoid_turn_duration_sec (seconds to yaw in
-AVOID_TURN before retrying forward; avoids endless spin), stuck_timeout_sec, reverse_speed_m_s,
-reverse_duration_sec, escape_turn_duration_sec, alternate_turn_direction, side_roi_enabled,
-side_roi_col_left_min/max, side_roi_col_right_min/max, side_depth_clear_margin_m,
-stuck_vx_threshold_m_s, stuck_wz_threshold_rad_s.
-
-With debug_avoidance:=true, logs periodically show: state (NORMAL / AVOID_TURN /
-REVERSE_ESCAPE / ESCAPE_TURN), action, d_front / d_left / d_right (min depth in ROIs m),
-vx, wz, stuck_accum.
-
-Suggested demo storyline (gas + SLAM robot)
-------------------------------------------
-1) Simulation + RViz showing map growth from RGB-D SLAM (/rtabmap/odom, map/grid if enabled).
-2) Gas sensor overlay (existing gas_sim + chemical_mapper) as a “risk map” or markers in RViz.
-3) Optionally enable enable_avoidance:=true so the robot creeps forward and turns away from
-   depth obstacles—still Nav2‑free and appropriate for fixed-height tabletop/hall demos.
+Optional 2D depth avoidance
+-----------------------------
+See full_system.launch.py enable_avoidance:=true (only after VO works).

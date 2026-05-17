@@ -20,8 +20,7 @@ def generate_launch_description():
         launch_arguments={"gz_args": f"-r {world_path}"}.items(),
     )
 
-    # Open lane: farther from pillar (-3.5,-2.2) than (-1.85,-2.85); yaw ~0 aligns +X runway
-    # toward asymmetric 3D props (pickets/heap/tag) instead of endless flat plaster.
+    # Open lane along +X; camera faces vo_calib_wall (high-contrast, no collision).
     spawn_drone = Node(
         package="ros_gz_sim",
         executable="create",
@@ -33,13 +32,13 @@ def generate_launch_description():
             "-file",
             model_path,
             "-x",
-            "-2.0",
+            "-3.5",
             "-y",
             "-3.05",
             "-z",
             "0.88",
             "-Y",
-            "0.04",
+            "0.0",
         ],
         output="screen",
     )
