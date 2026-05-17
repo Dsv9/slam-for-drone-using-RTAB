@@ -1,8 +1,9 @@
 <?xml version="1.0"?>
 <!--
-  Senior-project demo world (reliable reactive avoidance):
-  Spawn ~(-2.0, -3.05), forward +X. Free lane ~1.5 m wide around y=-3.05; props stay outside that band
-  or flush to the east wall so nothing forms a U/V trap. >= ~1.0 m between obstacle surfaces.
+  Senior-project demo world — reliable reactive avoidance only.
+  Spawn: (-2.0, -3.05), forward +X. Drive lane center y=-3.05, ~1.6 m clear width (y in [-3.85, -2.25]).
+  First 1.2 m along +X from spawn: no collision props (clear spawn zone ends ~x=-0.8).
+  Four separated avoidance boxes, staggered L/R, >= ~1.2 m between collision surfaces.
 -->
 <sdf version="1.9">
   <world name="default">
@@ -141,10 +142,10 @@
       </link>
     </model>
 
-    <!-- Distant decor + mid-room color (spread for demo; not one corner cluster) -->
+    <!-- RTAB visual feature — corner decor only (not in +X demo lane y≈-3) -->
     <model name="ob_box_a">
       <static>true</static>
-      <pose>3.6 3.4 0.55 0 0 0.2</pose>
+      <pose>4.8 4.2 0.55 0 0 0.2</pose>
       <link name="link">
         <collision name="c"><geometry><box><size>1.0 0.75 0.9</size></box></geometry></collision>
         <visual name="v">
@@ -166,7 +167,7 @@
     </model>
     <model name="ob_box_c">
       <static>true</static>
-      <pose>2.0 -5.35 0.65 0 0 0.5</pose>
+      <pose>-4.8 -5.0 0.65 0 0 0.5</pose>
       <link name="link">
         <collision name="c"><geometry><box><size>1.4 0.5 1.1</size></box></geometry></collision>
         <visual name="v">
@@ -175,6 +176,7 @@
         </visual>
       </link>
     </model>
+    <!-- RTAB visual feature — west wall panel (outside corridor) -->
     <model name="partition_short">
       <static>true</static>
       <pose>-5.15 0 1.0 0 0 0</pose>
@@ -187,14 +189,16 @@
       </link>
     </model>
 
-    <!-- main demo corridor -->
-    <!-- Centerline ~y=-3.05, usable width ~1.5 m (y in [-3.8, -2.3]); +X forward from spawn ~(-2.0,-3.05). -->
+    <!-- clear spawn zone -->
+    <!-- No models with collision west of x≈-0.8 (1.2 m open +X from spawn at x=-2.0). -->
 
-    <!-- RTAB visual feature -->
-    <!-- Tag board; west face ~x=0.0 so ~2.0 m open +X from spawn before solid props. -->
+    <!-- main demo corridor -->
+    <!-- Centerline y=-3.05; keep collision out of y∈[-3.85,-2.25] (~1.6 m). Props only north/south of band. -->
+
+    <!-- RTAB visual feature — patterned board on north wall (away from drive lane) -->
     <model name="vo_taglike">
       <static>true</static>
-      <pose>0.12 -1.25 0.95 0 0 0.2</pose>
+      <pose>4.5 4.85 0.95 0 0 0.2</pose>
       <link name="link">
         <collision name="outer"><geometry><box><size>0.04 0.5 0.5</size></box></geometry></collision>
         <visual name="outer"><geometry><box><size>0.04 0.5 0.5</size></box></geometry>
@@ -206,23 +210,19 @@
       </link>
     </model>
 
-    <!-- RTAB visual feature -->
-    <!-- Vertical strip mid-field (north of drive lane); east wall strip kept separate. -->
+    <!-- RTAB visual feature — east wall strips only (not in navigation corridor) -->
     <model name="vo_strip_mid">
       <static>true</static>
-      <pose>2.65 -1.42 1.05 0 0 1.571</pose>
+      <pose>5.42 2.2 1.05 0 0 1.571</pose>
       <link name="link">
         <collision name="c"><geometry><box><size>0.10 0.45 2.0</size></box></geometry></collision>
         <visual name="v"><geometry><box><size>0.10 0.45 2.0</size></box></geometry>
           <material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0.05 0.05 0.05 1</diffuse></material></visual>
       </link>
     </model>
-
-    <!-- RTAB visual feature -->
-    <!-- Second strip on inner east wall; separated from vo_strip_mid in +X and y. -->
     <model name="vo_strip_side">
       <static>true</static>
-      <pose>5.42 -4.55 1.05 0 0 1.571</pose>
+      <pose>5.42 -5.15 1.05 0 0 1.571</pose>
       <link name="link">
         <collision name="c"><geometry><box><size>0.10 0.45 2.0</size></box></geometry></collision>
         <visual name="v"><geometry><box><size>0.10 0.45 2.0</size></box></geometry>
@@ -230,53 +230,47 @@
       </link>
     </model>
 
-    <!-- avoidance obstacle -->
-    <!-- Left of path (+y); staggered in +X; south face ~y=-2.01 (>= ~1.0 m from lane centerline). -->
+    <!-- avoidance obstacle — 1st: left/north of lane; west face x≈-0.80 (1.2 m clear +X from spawn) -->
     <model name="demo_avoid_box_L">
       <static>true</static>
-      <pose>1.05 -1.75 0.40 0 0 0</pose>
+      <pose>-0.56 -2.02 0.38 0 0 0</pose>
       <link name="link">
-        <collision name="c"><geometry><box><size>0.52 0.52 0.52</size></box></geometry></collision>
-        <visual name="v"><geometry><box><size>0.52 0.52 0.52</size></box></geometry>
+        <collision name="c"><geometry><box><size>0.48 0.48 0.48</size></box></geometry></collision>
+        <visual name="v"><geometry><box><size>0.48 0.48 0.48</size></box></geometry>
           <material><ambient>0.88 0.35 0.12 1</ambient><diffuse>0.88 0.35 0.12 1</diffuse></material></visual>
       </link>
     </model>
 
-    <!-- avoidance obstacle -->
-    <!-- Right of path (-y); farther +X than box_L; spacing avoids diagonal pinch / wedge. -->
+    <!-- avoidance obstacle — 2nd: right/south of lane; ~2.0 m surface gap from box_L in +X -->
     <model name="demo_avoid_box_R">
       <static>true</static>
-      <pose>3.15 -4.85 0.40 0 0 0</pose>
+      <pose>1.55 -4.42 0.38 0 0 0</pose>
       <link name="link">
-        <collision name="c"><geometry><box><size>0.55 0.52 0.52</size></box></geometry></collision>
-        <visual name="v"><geometry><box><size>0.55 0.52 0.52</size></box></geometry>
+        <collision name="c"><geometry><box><size>0.48 0.48 0.48</size></box></geometry></collision>
+        <visual name="v"><geometry><box><size>0.48 0.48 0.48</size></box></geometry>
           <material><ambient>0.15 0.35 0.92 1</ambient><diffuse>0.15 0.35 0.92 1</diffuse></material></visual>
       </link>
     </model>
 
-    <!-- avoidance obstacle -->
-    <!-- Short wide cylinder; south offset; >= ~1 m surface gap from demo_avoid_box_R. -->
-    <model name="demo_avoid_pillar">
+    <!-- avoidance obstacle — 3rd: left/north again; ~1.4 m +X from box_R east face -->
+    <model name="demo_avoid_box_C">
       <static>true</static>
-      <pose>4.95 -4.35 0.52 0 0 0</pose>
+      <pose>3.35 -2.02 0.38 0 0 0</pose>
       <link name="link">
-        <collision name="c"><geometry><cylinder><radius>0.30</radius><length>0.80</length></cylinder></geometry></collision>
-        <visual name="v">
-          <geometry><cylinder><radius>0.30</radius><length>0.80</length></cylinder></geometry>
-          <material><ambient>0.45 0.25 0.75 1</ambient><diffuse>0.45 0.25 0.75 1</diffuse></material>
-        </visual>
+        <collision name="c"><geometry><box><size>0.48 0.48 0.48</size></box></geometry></collision>
+        <visual name="v"><geometry><box><size>0.48 0.48 0.48</size></box></geometry>
+          <material><ambient>0.12 0.55 0.88 1</ambient><diffuse>0.12 0.55 0.88 1</diffuse></material></visual>
       </link>
     </model>
 
-    <!-- RTAB visual feature -->
-    <!-- Small cube mid-room north of lane (>= ~1 m from demo_avoid_box_L). -->
-    <model name="vo_feat_cube_a">
+    <!-- avoidance obstacle — 4th: right/south; far forward, no pinch with box_C -->
+    <model name="demo_avoid_box_D">
       <static>true</static>
-      <pose>2.45 -2.52 0.42 0 0 0</pose>
+      <pose>5.05 -4.42 0.38 0 0 0</pose>
       <link name="link">
-        <collision name="c"><geometry><box><size>0.45 0.45 0.45</size></box></geometry></collision>
-        <visual name="v"><geometry><box><size>0.45 0.45 0.45</size></box></geometry>
-          <material><ambient>0.12 0.55 0.88 1</ambient><diffuse>0.12 0.55 0.88 1</diffuse></material></visual>
+        <collision name="c"><geometry><box><size>0.48 0.48 0.48</size></box></geometry></collision>
+        <visual name="v"><geometry><box><size>0.48 0.48 0.48</size></box></geometry>
+          <material><ambient>0.45 0.25 0.75 1</ambient><diffuse>0.45 0.25 0.75 1</diffuse></material></visual>
       </link>
     </model>
   </world>
