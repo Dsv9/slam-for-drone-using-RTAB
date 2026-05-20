@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <!--
   VO + avoidance demo world.
-  Spawn: (-4.5, -3.05), forward +X. Open lane ~1.7 m wide. First box west face ~x=1.96 (>=2 m clear from spawn).
-  Four separated avoidance boxes, staggered L/R, >= ~1.2 m between surfaces.
+  Spawn: (-5.5, -3.05), forward +X. Drive lane y=-3.05 with >=1.0 m gaps between obstacle faces.
+  First collision box west face ~x=2.96 (>=3 m clear from spawn). RTAB texture panels unchanged.
 -->
 <sdf version="1.9">
   <world name="default">
@@ -166,7 +166,7 @@
     </model>
     <model name="ob_box_c">
       <static>true</static>
-      <pose>-4.8 -5.0 0.65 0 0 0.5</pose>
+      <pose>-5.2 5.2 0.65 0 0 0.5</pose>
       <link name="link">
         <collision name="c"><geometry><box><size>1.4 0.5 1.1</size></box></geometry></collision>
         <visual name="v">
@@ -178,7 +178,7 @@
     <!-- RTAB visual feature — west wall panel (outside corridor) -->
     <model name="partition_short">
       <static>true</static>
-      <pose>-5.15 0 1.0 0 0 0</pose>
+      <pose>-5.15 2.8 1.0 0 0 0</pose>
       <link name="link">
         <collision name="c"><geometry><box><size>0.22 2.2 2.0</size></box></geometry></collision>
         <visual name="v">
@@ -189,10 +189,10 @@
     </model>
 
     <!-- clear spawn zone -->
-    <!-- No collision west of x≈-3.2 (>=2 m open +X from spawn at x=-4.5). -->
+    <!-- No collision west of x≈-2.5 (>=3 m open +X from spawn at x=-5.5). -->
 
     <!-- main demo corridor -->
-    <!-- Centerline y=-3.05; collision kept out of y∈[-3.85,-2.25] (~1.6 m free width). -->
+    <!-- Centerline y=-3.05; obstacle inner faces >=1.0 m apart (passage ~1.72 m at stagger). -->
 
     <!-- RTAB visual feature — forward calibration wall (visual only, no collision; faces spawn +X) -->
     <model name="vo_calib_wall">
@@ -287,10 +287,10 @@
       </link>
     </model>
 
-    <!-- avoidance obstacle — 1st: left/north of lane; west face ~x=1.96 (open lane from spawn) -->
+    <!-- avoidance — 1st north; west face x=2.96 (~3.5 m from spawn) -->
     <model name="demo_avoid_box_L">
       <static>true</static>
-      <pose>2.20 -1.85 0.38 0 0 0</pose>
+      <pose>3.20 -1.95 0.38 0 0 0</pose>
       <link name="link">
         <collision name="c"><geometry><box><size>0.48 0.48 0.48</size></box></geometry></collision>
         <visual name="v"><geometry><box><size>0.48 0.48 0.48</size></box></geometry>
@@ -298,10 +298,10 @@
       </link>
     </model>
 
-    <!-- avoidance obstacle — 2nd: right/south of lane; >=1.2 m from box_L -->
+    <!-- avoidance — 2nd south; staggered +1.6 m in X from box_L -->
     <model name="demo_avoid_box_R">
       <static>true</static>
-      <pose>3.80 -4.55 0.38 0 0 0</pose>
+      <pose>4.80 -4.15 0.38 0 0 0</pose>
       <link name="link">
         <collision name="c"><geometry><box><size>0.48 0.48 0.48</size></box></geometry></collision>
         <visual name="v"><geometry><box><size>0.48 0.48 0.48</size></box></geometry>
@@ -309,10 +309,10 @@
       </link>
     </model>
 
-    <!-- avoidance obstacle — 3rd: left/north; farther +X -->
+    <!-- avoidance — 3rd north; +X pair with >=1.5 m straight gap from box_L east face -->
     <model name="demo_avoid_box_C">
       <static>true</static>
-      <pose>5.20 -1.90 0.38 0 0 0</pose>
+      <pose>5.30 -1.95 0.38 0 0 0</pose>
       <link name="link">
         <collision name="c"><geometry><box><size>0.48 0.48 0.48</size></box></geometry></collision>
         <visual name="v"><geometry><box><size>0.48 0.48 0.48</size></box></geometry>
@@ -320,10 +320,10 @@
       </link>
     </model>
 
-    <!-- avoidance obstacle — 4th: right/south; far forward -->
+    <!-- avoidance — 4th south; between L and R in X (no same-x pinch) -->
     <model name="demo_avoid_box_D">
       <static>true</static>
-      <pose>5.80 -4.60 0.38 0 0 0</pose>
+      <pose>4.00 -4.15 0.38 0 0 0</pose>
       <link name="link">
         <collision name="c"><geometry><box><size>0.48 0.48 0.48</size></box></geometry></collision>
         <visual name="v"><geometry><box><size>0.48 0.48 0.48</size></box></geometry>
