@@ -1,8 +1,7 @@
 <?xml version="1.0"?>
 <!--
   VO + avoidance demo world.
-  Spawn: (-5.5, -3.05), forward +X. Drive lane y=-3.05 with >=1.0 m gaps between obstacle faces.
-  First collision box west face ~x=2.96 (>=3 m clear from spawn). RTAB texture panels unchanged.
+  Spawn: (0.0, -3.05), forward +X. Center of open lane, >=1 m from walls. First box west face ~x=2.96.
 -->
 <sdf version="1.9">
   <world name="default">
@@ -189,10 +188,10 @@
     </model>
 
     <!-- clear spawn zone -->
-    <!-- No collision west of x≈-2.5 (>=3 m open +X from spawn at x=-5.5). -->
+    <!-- Spawn at x=0, y=-3.05: >=5 m from east/west walls, >=2.8 m from south wall. -->
 
     <!-- main demo corridor -->
-    <!-- Centerline y=-3.05; obstacle inner faces >=1.0 m apart (passage ~1.72 m at stagger). -->
+    <!-- Centerline y=-3.05; obstacle gaps >=1.0 m between inner faces. -->
 
     <!-- RTAB visual feature — forward calibration wall (visual only, no collision; faces spawn +X) -->
     <model name="vo_calib_wall">

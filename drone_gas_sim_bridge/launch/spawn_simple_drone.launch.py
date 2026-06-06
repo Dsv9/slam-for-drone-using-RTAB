@@ -32,7 +32,7 @@ def generate_launch_description():
             "-file",
             model_path,
             "-x",
-            "-5.5",
+            "0.0",
             "-y",
             "-3.05",
             "-z",

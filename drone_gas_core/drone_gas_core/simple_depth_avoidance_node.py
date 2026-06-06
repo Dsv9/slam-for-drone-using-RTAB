@@ -1,7 +1,7 @@
-"""DEMO closed-loop depth avoidance — timer @10 Hz, /odom progress enforcement.
+"""DEMO depth avoidance — 10 Hz timer FSM with WALL_ESCAPE anti-stun-lock.
 
 Publishes /drone/cmd_vel -> cmd_vel_watchdog -> /drone/cmd_vel_safe
-  -> gazebo_controller_bridge_node -> /cmd_vel -> ros_gz_bridge -> Gazebo VelocityControl.
+  -> gazebo_controller_bridge_node -> /cmd_vel -> ros_gz_bridge -> Gazebo.
 """
 from __future__ import annotations
 
@@ -66,7 +66,14 @@ class _State(IntEnum):
     TURN_RIGHT = 3
     REVERSE = 4
     RECOVERY_TURN = 5
-    SEARCH_TURN = 6
+    WALL_ESCAPE = 6
+    SEARCH_TURN = 7
+
+
+class _WallEscapePhase(IntEnum):
+    REVERSE = 0
+    TURN = 1
+    FORCE_FORWARD = 2
 
 
 def _as_bool(v) -> bool:
@@ -84,21 +91,23 @@ class SimpleDepthAvoidanceNode(Node):
         self.declare_parameter("cmd_vel_topic", "/drone/cmd_vel")
         self.declare_parameter("publish_hz", 10.0)
 
-        self.declare_parameter("safe_distance_m", 0.30)
-        self.declare_parameter("critical_distance_m", 0.18)
-        self.declare_parameter("clear_distance_m", 0.45)
-        self.declare_parameter("forward_speed_m_s", 0.060)
-        self.declare_parameter("slow_forward_speed_m_s", 0.030)
-        self.declare_parameter("turn_speed_rad_s", 0.35)
-        self.declare_parameter("search_turn_speed_rad_s", 0.20)
-        self.declare_parameter("reverse_speed_m_s", -0.040)
+        self.declare_parameter("safe_distance_m", 0.45)
+        self.declare_parameter("critical_distance_m", 0.25)
+        self.declare_parameter("clear_distance_m", 0.75)
+        self.declare_parameter("forward_speed_m_s", 0.07)
+        self.declare_parameter("slow_forward_speed_m_s", 0.035)
+        self.declare_parameter("turn_speed_rad_s", 0.45)
+        self.declare_parameter("search_turn_speed_rad_s", 0.35)
+        self.declare_parameter("reverse_speed_m_s", -0.06)
         self.declare_parameter("reverse_time_s", 1.2)
-        self.declare_parameter("recovery_turn_time_s", 1.8)
-        self.declare_parameter("stuck_timeout_s", 2.5)
+        self.declare_parameter("recovery_turn_time_s", 2.0)
+        self.declare_parameter("wall_escape_turn_time_s", 2.5)
+        self.declare_parameter("stuck_timeout_s", 2.0)
+        self.declare_parameter("force_forward_time_s", 1.0)
         self.declare_parameter("progress_epsilon_m", 0.025)
         self.declare_parameter("max_range_m", 3.0)
-        self.declare_parameter("min_effective_linear_speed_m_s", 0.025)
-        self.declare_parameter("min_effective_turn_speed_rad_s", 0.20)
+        self.declare_parameter("min_effective_linear_speed_m_s", 0.035)
+        self.declare_parameter("min_effective_turn_speed_rad_s", 0.30)
         self.declare_parameter("slow_forward_max_s", 2.0)
         self.declare_parameter("depth_percentile", 20.0)
 
@@ -134,17 +143,19 @@ class SimpleDepthAvoidanceNode(Node):
 
         self._last_depth: Optional[np.ndarray] = None
         self._odom_xy: Optional[Tuple[float, float]] = None
+        self._odom_valid = False
         self._anchor_xy: Optional[Tuple[float, float]] = None
         self._anchor_t = time.monotonic()
         self._odom_progress_m = 0.0
 
         self._state = _State.FORWARD
+        self._state_t0 = time.monotonic()
         self._reason = "init"
         self._phase_until = 0.0
         self._slow_until = 0.0
-        self._turn_t0: Optional[float] = None
         self._turn_dir = 1.0
-        self._recovery_dir = 1.0
+        self._escape_dir = 1.0
+        self._wall_phase = _WallEscapePhase.REVERSE
         self._dbg_last_t = 0.0
         self._warn_no_depth = False
 
@@ -154,7 +165,15 @@ class SimpleDepthAvoidanceNode(Node):
             self._last_depth = d
 
     def _odom_cb(self, msg: Odometry) -> None:
+        q = msg.pose.pose.orientation
+        if abs(q.w) < 1e-6:
+            self._odom_valid = False
+            return
         xy = (float(msg.pose.pose.position.x), float(msg.pose.pose.position.y))
+        if not (math.isfinite(xy[0]) and math.isfinite(xy[1])):
+            self._odom_valid = False
+            return
+        self._odom_valid = True
         if self._anchor_xy is None:
             self._anchor_xy = xy
             self._anchor_t = time.monotonic()
@@ -169,143 +188,193 @@ class SimpleDepthAvoidanceNode(Node):
         twist = Twist()
         reason = "idle"
 
-        if self._odom_stuck(now, p):
-            self._enter_reverse(now, p, "odom_no_progress")
-            twist.linear.x = p["v_rev"]
-            twist.angular.z = 0.0
-            reason = "odom_no_progress"
-            self._state = _State.REVERSE
+        if self._state == _State.WALL_ESCAPE:
+            twist, reason = self._run_wall_escape(now, p, front, valid)
+        elif self._state == _State.REVERSE:
+            twist, reason = self._run_reverse(now, p)
+        elif self._state == _State.RECOVERY_TURN:
+            twist, reason = self._run_recovery_turn(now, p)
+        elif self._should_wall_escape(now, p, front, valid):
+            self._enter_wall_escape(now, p)
+            twist, reason = self._run_wall_escape(now, p, front, valid)
+        elif not valid:
+            twist, reason = self._run_search_turn(now, p)
+        elif front < p["critical"]:
+            self._enter_reverse(now, p, "critical_close_reverse")
+            twist, reason = self._run_reverse(now, p)
         else:
-            twist, reason = self._run_state_machine(now, p, front, left, right, valid)
+            twist, reason = self._run_normal(now, p, front, left, right)
+
+        if (
+            self._odom_valid
+            and self._state not in (_State.REVERSE, _State.RECOVERY_TURN, _State.WALL_ESCAPE)
+            and self._odom_stuck(now, p)
+        ):
+            self._enter_wall_escape(now, p, "odom_no_progress")
+            twist, reason = self._run_wall_escape(now, p, front, valid)
 
         self._enforce_cmd(twist, self._state, p)
         self._pub.publish(twist)
         self._log_debug(now, p, twist, front, left, right, reason)
 
-    def _run_state_machine(
-        self,
-        now: float,
-        p: dict,
-        front: float,
-        left: float,
-        right: float,
-        valid: bool,
+    def _state_time(self, now: float) -> float:
+        return now - self._state_t0
+
+    def _set_state(self, state: _State, now: float, reason: str) -> None:
+        if self._state != state:
+            self._state = state
+            self._state_t0 = now
+        self._reason = reason
+
+    def _run_normal(
+        self, now: float, p: dict, front: float, left: float, right: float
     ) -> Tuple[Twist, str]:
         twist = Twist()
 
-        if self._state == _State.REVERSE:
-            if now < self._phase_until:
-                twist.linear.x = p["v_rev"]
-                return twist, "critical_close"
-            self._state = _State.RECOVERY_TURN
-            self._phase_until = now + p["recovery_turn_time_s"]
-            self._recovery_dir *= -1.0
-            twist.angular.z = self._recovery_dir * p["w_turn"]
-            return twist, "recovery_turn"
-
-        if self._state == _State.RECOVERY_TURN:
-            if now < self._phase_until and not (valid and front > p["safe"]):
-                twist.angular.z = self._recovery_dir * p["w_turn"]
-                return twist, "recovery_turn"
-            self._state = _State.FORWARD
-            self._turn_t0 = None
-            self._reset_anchor(now)
-            if valid and front < p["clear"]:
-                return self._enter_slow_forward(now, p, front, left, right)
-            if not valid:
-                return self._enter_search_turn(p)
-            twist.linear.x = p["v_fwd"]
-            self._state = _State.FORWARD
-            return twist, "clear"
-
-        if not valid:
-            return self._enter_search_turn(p)
-
-        if front < p["critical"]:
-            self._enter_reverse(now, p, "critical_close")
-            twist.linear.x = p["v_rev"]
-            return twist, "critical_close"
-
         if self._state == _State.SLOW_FORWARD:
-            if now >= self._slow_until:
+            if self._state_time(now) >= p["slow_max_s"]:
                 if front >= p["clear"]:
-                    self._state = _State.FORWARD
+                    self._set_state(_State.FORWARD, now, "clear_forward")
                     twist.linear.x = p["v_fwd"]
-                    return twist, "clear"
+                    return twist, "clear_forward"
                 if front < p["safe"]:
-                    return self._enter_turn(now, p, front, left, right, "front_blocked_turn_to_freer_side")
-                self._slow_until = now + p["slow_max_s"]
+                    return self._enter_turn(now, p, left, right, "front_blocked_turn_to_freer_side")
             twist.linear.x = p["v_slow"]
-            twist.angular.z = 0.15 * self._away_sign(left, right) * p["w_turn"]
+            twist.angular.z = 0.15 * self._away_sign(left, right)
             return twist, "cautious_forward"
 
         if self._state in (_State.TURN_LEFT, _State.TURN_RIGHT):
-            if self._turn_t0 is None:
-                self._turn_t0 = now
-            elif (now - self._turn_t0) >= p["stuck_timeout_s"]:
-                self._enter_reverse(now, p, "turn_timeout")
-                twist.linear.x = p["v_rev"]
-                return twist, "turn_timeout"
+            if front >= p["clear"]:
+                self._set_state(_State.FORWARD, now, "clear_forward")
+                twist.linear.x = p["v_fwd"]
+                return twist, "clear_forward"
             if front >= p["safe"]:
-                self._turn_t0 = None
-                if front >= p["clear"]:
-                    self._state = _State.FORWARD
-                    twist.linear.x = p["v_fwd"]
-                    return twist, "clear"
-                return self._enter_slow_forward(now, p, front, left, right)
+                return self._enter_slow_forward(now, p, left, right)
             twist.angular.z = self._turn_dir * p["w_turn"]
             return twist, "front_blocked_turn_to_freer_side"
 
+        if self._state == _State.SEARCH_TURN:
+            twist.angular.z = p["w_search"]
+            return twist, "no_valid_depth"
+
         if front >= p["clear"]:
-            self._state = _State.FORWARD
-            self._turn_t0 = None
+            self._set_state(_State.FORWARD, now, "clear_forward")
             twist.linear.x = p["v_fwd"]
-            self._reset_anchor(now)
-            return twist, "clear"
+            return twist, "clear_forward"
 
         if front >= p["safe"]:
-            return self._enter_slow_forward(now, p, front, left, right)
+            return self._enter_slow_forward(now, p, left, right)
 
-        return self._enter_turn(now, p, front, left, right, "front_blocked_turn_to_freer_side")
+        return self._enter_turn(now, p, left, right, "front_blocked_turn_to_freer_side")
+
+    def _run_reverse(self, now: float, p: dict) -> Tuple[Twist, str]:
+        twist = Twist()
+        if now < self._phase_until:
+            twist.linear.x = p["v_rev"]
+            return twist, "critical_close_reverse"
+        self._set_state(_State.RECOVERY_TURN, now, "recovery_turn_after_reverse")
+        self._phase_until = now + p["recovery_turn_time_s"]
+        self._escape_dir *= -1.0
+        twist.angular.z = self._escape_dir * p["w_turn"]
+        return twist, "recovery_turn_after_reverse"
+
+    def _run_recovery_turn(self, now: float, p: dict) -> Tuple[Twist, str]:
+        twist = Twist()
+        if now < self._phase_until:
+            twist.angular.z = self._escape_dir * p["w_turn"]
+            return twist, "recovery_turn_after_reverse"
+        self._set_state(_State.FORWARD, now, "recovery_done")
+        twist.linear.x = p["v_fwd"]
+        return twist, "recovery_done"
+
+    def _run_search_turn(self, now: float, p: dict) -> Tuple[Twist, str]:
+        if self._state != _State.SEARCH_TURN:
+            self._set_state(_State.SEARCH_TURN, now, "no_valid_depth")
+        twist = Twist()
+        twist.angular.z = p["w_search"]
+        return twist, "no_valid_depth"
+
+    def _enter_wall_escape(self, now: float, p: dict, reason: str = "wall_corner_escape") -> None:
+        self._wall_phase = _WallEscapePhase.REVERSE
+        self._phase_until = now + p["reverse_time_s"]
+        self._escape_dir *= -1.0
+        self._set_state(_State.WALL_ESCAPE, now, reason)
+
+    def _run_wall_escape(
+        self, now: float, p: dict, front: float, valid: bool
+    ) -> Tuple[Twist, str]:
+        twist = Twist()
+        reason = "wall_corner_escape"
+
+        if self._wall_phase == _WallEscapePhase.REVERSE:
+            if now < self._phase_until:
+                twist.linear.x = p["v_rev"]
+                return twist, reason
+            self._wall_phase = _WallEscapePhase.TURN
+            self._phase_until = now + p["wall_escape_turn_time_s"]
+            twist.angular.z = self._escape_dir * p["w_turn"]
+            return twist, reason
+
+        if self._wall_phase == _WallEscapePhase.TURN:
+            if now < self._phase_until:
+                twist.angular.z = self._escape_dir * p["w_turn"]
+                return twist, reason
+            self._wall_phase = _WallEscapePhase.FORCE_FORWARD
+            self._phase_until = now + p["force_forward_time_s"]
+            if valid and front >= p["critical"]:
+                twist.linear.x = p["v_fwd"]
+                return twist, reason
+            twist.angular.z = self._escape_dir * p["w_turn"]
+            return twist, reason
+
+        if now < self._phase_until:
+            if valid and front < p["critical"]:
+                twist.angular.z = self._escape_dir * p["w_turn"]
+                return twist, reason
+            twist.linear.x = p["v_fwd"]
+            return twist, reason
+
+        self._set_state(_State.FORWARD, now, "wall_escape_done")
+        twist.linear.x = p["v_fwd"]
+        return twist, "wall_escape_done"
+
+    def _should_wall_escape(self, now: float, p: dict, front: float, valid: bool) -> bool:
+        if self._state not in (
+            _State.SLOW_FORWARD,
+            _State.TURN_LEFT,
+            _State.TURN_RIGHT,
+            _State.SEARCH_TURN,
+        ):
+            return False
+        if self._state_time(now) < p["stuck_timeout_s"]:
+            return False
+        if valid and front >= p["clear"]:
+            return False
+        return True
 
     def _enter_slow_forward(
-        self, now: float, p: dict, front: float, left: float, right: float
+        self, now: float, p: dict, left: float, right: float
     ) -> Tuple[Twist, str]:
-        self._state = _State.SLOW_FORWARD
+        self._set_state(_State.SLOW_FORWARD, now, "cautious_forward")
         self._slow_until = now + p["slow_max_s"]
         t = Twist()
         t.linear.x = p["v_slow"]
-        t.angular.z = 0.15 * self._away_sign(left, right) * p["w_turn"]
+        t.angular.z = 0.15 * self._away_sign(left, right)
         return t, "cautious_forward"
 
     def _enter_turn(
-        self,
-        now: float,
-        p: dict,
-        front: float,
-        left: float,
-        right: float,
-        reason: str,
+        self, now: float, p: dict, left: float, right: float, reason: str
     ) -> Tuple[Twist, str]:
         self._turn_dir = self._freer_sign(left, right)
-        self._state = _State.TURN_LEFT if self._turn_dir > 0 else _State.TURN_RIGHT
-        self._turn_t0 = now
+        st = _State.TURN_LEFT if self._turn_dir > 0 else _State.TURN_RIGHT
+        self._set_state(st, now, reason)
         t = Twist()
         t.angular.z = self._turn_dir * p["w_turn"]
         return t, reason
 
-    def _enter_search_turn(self, p: dict) -> Tuple[Twist, str]:
-        self._state = _State.SEARCH_TURN
-        t = Twist()
-        t.angular.z = self._turn_dir * p["w_search"]
-        return t, "no_valid_depth"
-
     def _enter_reverse(self, now: float, p: dict, reason: str) -> None:
-        self._state = _State.REVERSE
+        self._set_state(_State.REVERSE, now, reason)
         self._phase_until = now + p["reverse_time_s"]
-        self._turn_t0 = None
-        self._reset_anchor(now)
-        self._reason = reason
 
     def _params(self) -> dict:
         return {
@@ -320,6 +389,12 @@ class SimpleDepthAvoidanceNode(Node):
             "reverse_time_s": max(float(self.get_parameter("reverse_time_s").value), 0.1),
             "recovery_turn_time_s": max(
                 float(self.get_parameter("recovery_turn_time_s").value), 0.3
+            ),
+            "wall_escape_turn_time_s": max(
+                float(self.get_parameter("wall_escape_turn_time_s").value), 0.5
+            ),
+            "force_forward_time_s": max(
+                float(self.get_parameter("force_forward_time_s").value), 0.3
             ),
             "stuck_timeout_s": max(float(self.get_parameter("stuck_timeout_s").value), 0.5),
             "progress_eps": max(float(self.get_parameter("progress_epsilon_m").value), 1e-4),
@@ -338,6 +413,7 @@ class SimpleDepthAvoidanceNode(Node):
             "rc1": float(self.get_parameter("roi_col_frac_right_max").value),
             "dbg": _as_bool(self.get_parameter("debug_avoidance").value),
             "dbg_period": max(float(self.get_parameter("debug_avoidance_period_sec").value), 0.25),
+            "demo": _as_bool(self.get_parameter("demo_avoidance_mode").value),
         }
 
     def _measure_regions(self, p: dict) -> Tuple[float, float, float, bool]:
@@ -368,7 +444,7 @@ class SimpleDepthAvoidanceNode(Node):
                 return 1.0
             if d_right > d_left + 0.04:
                 return -1.0
-        return self._turn_dir
+        return self._turn_dir if self._turn_dir != 0.0 else self._escape_dir
 
     def _away_sign(self, d_left: float, d_right: float) -> float:
         if np.isfinite(d_left) and np.isfinite(d_right):
@@ -376,16 +452,10 @@ class SimpleDepthAvoidanceNode(Node):
                 return 1.0
             if d_right > d_left:
                 return -1.0
-        return self._turn_dir
-
-    def _reset_anchor(self, now: float) -> None:
-        if self._odom_xy is not None:
-            self._anchor_xy = self._odom_xy
-            self._anchor_t = now
-            self._odom_progress_m = 0.0
+        return self._escape_dir
 
     def _update_odom_progress(self, now: float, p: dict) -> None:
-        if self._odom_xy is None or self._anchor_xy is None:
+        if not self._odom_valid or self._odom_xy is None or self._anchor_xy is None:
             self._odom_progress_m = 0.0
             return
         self._odom_progress_m = math.hypot(
@@ -397,38 +467,57 @@ class SimpleDepthAvoidanceNode(Node):
             self._odom_progress_m = 0.0
 
     def _odom_stuck(self, now: float, p: dict) -> bool:
-        if self._state in (_State.REVERSE, _State.RECOVERY_TURN):
-            return False
         if self._odom_xy is None or self._anchor_xy is None:
             return False
         if self._odom_progress_m >= p["progress_eps"]:
             return False
-        if (now - self._anchor_t) < p["stuck_timeout_s"]:
-            return False
-        self._recovery_dir *= -1.0
-        return True
+        return (now - self._anchor_t) >= p["stuck_timeout_s"]
 
     def _enforce_cmd(self, twist: Twist, state: _State, p: dict) -> None:
         if state == _State.FORWARD:
-            if twist.linear.x > 0.0 and twist.linear.x < p["min_vx"]:
-                twist.linear.x = p["min_vx"]
-            elif twist.linear.x <= 0.0:
-                twist.linear.x = p["min_vx"]
+            if twist.linear.x <= 0.0:
+                twist.linear.x = p["v_fwd"]
+            elif twist.linear.x < p["v_fwd"]:
+                twist.linear.x = p["v_fwd"]
         elif state == _State.SLOW_FORWARD:
-            if twist.linear.x > 0.0 and twist.linear.x < p["min_vx"]:
-                twist.linear.x = p["min_vx"]
-            elif twist.linear.x <= 0.0:
-                twist.linear.x = p["min_vx"]
+            floor = max(p["v_slow"], p["min_vx"])
+            if twist.linear.x <= 0.0:
+                twist.linear.x = floor
+            elif twist.linear.x < floor:
+                twist.linear.x = floor
         elif state == _State.REVERSE:
             if twist.linear.x > p["v_rev"] * 0.5:
                 twist.linear.x = p["v_rev"]
-        elif state in (_State.TURN_LEFT, _State.TURN_RIGHT, _State.RECOVERY_TURN, _State.SEARCH_TURN):
+        elif state == _State.WALL_ESCAPE:
+            if twist.linear.x < 0.0:
+                if twist.linear.x > p["v_rev"] * 0.5:
+                    twist.linear.x = p["v_rev"]
+            elif twist.linear.x > 0.0:
+                if twist.linear.x < p["v_fwd"]:
+                    twist.linear.x = p["v_fwd"]
             wz = twist.angular.z
-            if abs(wz) < p["min_wz"]:
+            if abs(wz) > 1e-6 and abs(wz) < p["min_wz"]:
+                sign = 1.0 if wz >= 0.0 else -1.0
+                twist.angular.z = sign * max(p["min_wz"], p["w_turn"])
+            elif abs(wz) > 1e-6 and abs(wz) < p["w_turn"]:
+                sign = 1.0 if wz >= 0.0 else -1.0
+                twist.angular.z = sign * p["w_turn"]
+        elif state in (
+            _State.TURN_LEFT,
+            _State.TURN_RIGHT,
+            _State.RECOVERY_TURN,
+            _State.SEARCH_TURN,
+        ):
+            wz = twist.angular.z
+            floor = p["min_wz"]
+            if abs(wz) < floor:
                 sign = 1.0 if wz >= 0.0 else -1.0
                 if wz == 0.0:
-                    sign = self._turn_dir if state != _State.RECOVERY_TURN else self._recovery_dir
-                twist.angular.z = sign * p["min_wz"]
+                    sign = self._turn_dir if state in (_State.TURN_LEFT, _State.TURN_RIGHT) else self._escape_dir
+                twist.angular.z = sign * max(floor, p["w_turn"] if state != _State.SEARCH_TURN else p["w_search"])
+            elif state != _State.SEARCH_TURN and abs(wz) < p["w_turn"]:
+                sign = 1.0 if wz >= 0.0 else -1.0
+                twist.angular.z = sign * p["w_turn"]
 
     def _log_debug(
         self,
@@ -446,17 +535,19 @@ class SimpleDepthAvoidanceNode(Node):
         ff = "%.2f" % front if np.isfinite(front) else "nan"
         lf = "%.2f" % left if np.isfinite(left) else "nan"
         rf = "%.2f" % right if np.isfinite(right) else "nan"
+        mode = "DEMO" if p["demo"] else "LEGACY"
         self.get_logger().info(
-            "[avoidance] state=%s front=%s left=%s right=%s cmd_linear=%.3f cmd_angular=%.3f "
-            "odom_progress=%.3f reason=%s"
+            "[avoidance] mode=%s state=%s front=%s left=%s right=%s "
+            "cmd_linear=%.3f cmd_angular=%.3f state_time=%.1f reason=%s"
             % (
+                mode,
                 self._state.name,
                 ff,
                 lf,
                 rf,
                 twist.linear.x,
                 twist.angular.z,
-                self._odom_progress_m,
+                self._state_time(now),
                 reason,
             )
         )
