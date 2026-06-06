@@ -101,9 +101,15 @@ class SimpleDepthAvoidanceNode(Node):
         self.declare_parameter("reverse_speed_m_s", -0.06)
         self.declare_parameter("reverse_time_s", 1.2)
         self.declare_parameter("recovery_turn_time_s", 2.0)
-        self.declare_parameter("wall_escape_turn_time_s", 2.5)
+        self.declare_parameter("wall_escape_turn_time_s", 2.8)
+        self.declare_parameter("wall_escape_reverse_time_s", 1.5)
+        self.declare_parameter("force_forward_after_escape_s", 0.8)
+        self.declare_parameter("corner_lock_timeout_s", 4.0)
+        self.declare_parameter("turn_flip_limit", 3)
+        self.declare_parameter("turn_flip_window_s", 6.0)
+        self.declare_parameter("side_free_margin_m", 0.05)
         self.declare_parameter("stuck_timeout_s", 2.0)
-        self.declare_parameter("force_forward_time_s", 1.0)
+        self.declare_parameter("force_forward_time_s", 0.8)
         self.declare_parameter("progress_epsilon_m", 0.025)
         self.declare_parameter("max_range_m", 3.0)
         self.declare_parameter("min_effective_linear_speed_m_s", 0.035)
@@ -158,6 +164,9 @@ class SimpleDepthAvoidanceNode(Node):
         self._wall_phase = _WallEscapePhase.REVERSE
         self._dbg_last_t = 0.0
         self._warn_no_depth = False
+        self._non_forward_t0: Optional[float] = None
+        self._front_not_clear_t0: Optional[float] = None
+        self._turn_flips: list[float] = []
 
     def _depth_cb(self, msg: Image) -> None:
         d = _decode_depth(msg)
@@ -185,8 +194,11 @@ class SimpleDepthAvoidanceNode(Node):
         self._update_odom_progress(now, p)
 
         front, left, right, valid = self._measure_regions(p)
+        self._update_front_blocked_timer(now, p, front, valid)
         twist = Twist()
         reason = "idle"
+
+        corner_lock, lock_reason = self._corner_lock_detected(now, p, front, left, right, valid)
 
         if self._state == _State.WALL_ESCAPE:
             twist, reason = self._run_wall_escape(now, p, front, valid)
@@ -194,8 +206,8 @@ class SimpleDepthAvoidanceNode(Node):
             twist, reason = self._run_reverse(now, p)
         elif self._state == _State.RECOVERY_TURN:
             twist, reason = self._run_recovery_turn(now, p)
-        elif self._should_wall_escape(now, p, front, valid):
-            self._enter_wall_escape(now, p)
+        elif corner_lock:
+            self._enter_wall_escape(now, p, lock_reason)
             twist, reason = self._run_wall_escape(now, p, front, valid)
         elif not valid:
             twist, reason = self._run_search_turn(now, p)
@@ -221,10 +233,98 @@ class SimpleDepthAvoidanceNode(Node):
         return now - self._state_t0
 
     def _set_state(self, state: _State, now: float, reason: str) -> None:
-        if self._state != state:
+        prev = self._state
+        if prev != state:
+            if (
+                (prev == _State.TURN_LEFT and state == _State.TURN_RIGHT)
+                or (prev == _State.TURN_RIGHT and state == _State.TURN_LEFT)
+            ):
+                self._turn_flips.append(now)
+            if state == _State.FORWARD:
+                self._non_forward_t0 = None
+                self._front_not_clear_t0 = None
+                self._turn_flips.clear()
+            elif state in (
+                _State.SLOW_FORWARD,
+                _State.TURN_LEFT,
+                _State.TURN_RIGHT,
+                _State.SEARCH_TURN,
+            ):
+                if self._non_forward_t0 is None:
+                    self._non_forward_t0 = now
             self._state = state
             self._state_t0 = now
         self._reason = reason
+
+    def _update_front_blocked_timer(
+        self, now: float, p: dict, front: float, valid: bool
+    ) -> None:
+        if valid and np.isfinite(front) and front < p["clear"]:
+            if self._front_not_clear_t0 is None:
+                self._front_not_clear_t0 = now
+        else:
+            self._front_not_clear_t0 = None
+
+    def _sides_indecisive(self, left: float, right: float, p: dict) -> bool:
+        if not (np.isfinite(left) and np.isfinite(right)):
+            return False
+        margin = p["side_margin"]
+        both_blocked = left < p["safe"] and right < p["safe"]
+        nearly_equal = abs(left - right) < margin
+        both_tight = left < p["clear"] and right < p["clear"]
+        return both_blocked or (nearly_equal and both_tight)
+
+    def _corner_lock_detected(
+        self,
+        now: float,
+        p: dict,
+        front: float,
+        left: float,
+        right: float,
+        valid: bool,
+    ) -> Tuple[bool, str]:
+        if self._state in (
+            _State.WALL_ESCAPE,
+            _State.REVERSE,
+            _State.RECOVERY_TURN,
+            _State.FORWARD,
+        ):
+            return False, ""
+
+        window = p["turn_flip_window_s"]
+        self._turn_flips = [t for t in self._turn_flips if (now - t) <= window]
+        if len(self._turn_flips) > p["turn_flip_limit"]:
+            return True, "turn_flip_lock"
+
+        blocked_elapsed = (
+            (now - self._non_forward_t0)
+            if self._non_forward_t0 is not None
+            else 0.0
+        )
+        if blocked_elapsed >= p["corner_lock_timeout_s"]:
+            return True, "corner_lock_timeout"
+
+        if (
+            valid
+            and self._front_not_clear_t0 is not None
+            and (now - self._front_not_clear_t0) >= p["corner_lock_timeout_s"]
+        ):
+            return True, "corner_lock_timeout"
+
+        if (
+            valid
+            and self._sides_indecisive(left, right, p)
+            and self._state in (_State.TURN_LEFT, _State.TURN_RIGHT, _State.SLOW_FORWARD)
+            and blocked_elapsed >= p["corner_lock_timeout_s"] * 0.5
+        ):
+            return True, "corner_lock_timeout"
+
+        return False, ""
+
+    def _reset_corner_lock_trackers(self) -> None:
+        self._non_forward_t0 = None
+        self._front_not_clear_t0 = None
+        self._turn_flips.clear()
 
     def _run_normal(
         self, now: float, p: dict, front: float, left: float, right: float
@@ -296,61 +396,52 @@ class SimpleDepthAvoidanceNode(Node):
 
     def _enter_wall_escape(self, now: float, p: dict, reason: str = "wall_corner_escape") -> None:
         self._wall_phase = _WallEscapePhase.REVERSE
-        self._phase_until = now + p["reverse_time_s"]
+        self._phase_until = now + p["wall_escape_reverse_time_s"]
         self._escape_dir *= -1.0
+        self._reset_corner_lock_trackers()
         self._set_state(_State.WALL_ESCAPE, now, reason)
 
     def _run_wall_escape(
         self, now: float, p: dict, front: float, valid: bool
     ) -> Tuple[Twist, str]:
         twist = Twist()
-        reason = "wall_corner_escape"
 
         if self._wall_phase == _WallEscapePhase.REVERSE:
             if now < self._phase_until:
                 twist.linear.x = p["v_rev"]
-                return twist, reason
+                return twist, "wall_escape_reverse"
             self._wall_phase = _WallEscapePhase.TURN
             self._phase_until = now + p["wall_escape_turn_time_s"]
             twist.angular.z = self._escape_dir * p["w_turn"]
-            return twist, reason
+            return twist, "wall_escape_turn"
 
         if self._wall_phase == _WallEscapePhase.TURN:
             if now < self._phase_until:
                 twist.angular.z = self._escape_dir * p["w_turn"]
-                return twist, reason
+                return twist, "wall_escape_turn"
             self._wall_phase = _WallEscapePhase.FORCE_FORWARD
-            self._phase_until = now + p["force_forward_time_s"]
-            if valid and front >= p["critical"]:
+            self._phase_until = now + p["force_forward_after_escape_s"]
+            if valid and front > p["critical"]:
                 twist.linear.x = p["v_fwd"]
-                return twist, reason
-            twist.angular.z = self._escape_dir * p["w_turn"]
-            return twist, reason
+                return twist, "force_forward_after_escape"
+            self._wall_phase = _WallEscapePhase.REVERSE
+            self._phase_until = now + p["wall_escape_reverse_time_s"]
+            twist.linear.x = p["v_rev"]
+            return twist, "wall_escape_reverse"
 
         if now < self._phase_until:
-            if valid and front < p["critical"]:
-                twist.angular.z = self._escape_dir * p["w_turn"]
-                return twist, reason
+            if valid and front <= p["critical"]:
+                self._wall_phase = _WallEscapePhase.REVERSE
+                self._phase_until = now + p["wall_escape_reverse_time_s"]
+                twist.linear.x = p["v_rev"]
+                return twist, "wall_escape_reverse"
             twist.linear.x = p["v_fwd"]
-            return twist, reason
+            return twist, "force_forward_after_escape"
 
         self._set_state(_State.FORWARD, now, "wall_escape_done")
+        self._reset_corner_lock_trackers()
         twist.linear.x = p["v_fwd"]
         return twist, "wall_escape_done"
-
-    def _should_wall_escape(self, now: float, p: dict, front: float, valid: bool) -> bool:
-        if self._state not in (
-            _State.SLOW_FORWARD,
-            _State.TURN_LEFT,
-            _State.TURN_RIGHT,
-            _State.SEARCH_TURN,
-        ):
-            return False
-        if self._state_time(now) < p["stuck_timeout_s"]:
-            return False
-        if valid and front >= p["clear"]:
-            return False
-        return True
 
     def _enter_slow_forward(
         self, now: float, p: dict, left: float, right: float
@@ -393,6 +484,20 @@ class SimpleDepthAvoidanceNode(Node):
             "wall_escape_turn_time_s": max(
                 float(self.get_parameter("wall_escape_turn_time_s").value), 0.5
             ),
+            "wall_escape_reverse_time_s": max(
+                float(self.get_parameter("wall_escape_reverse_time_s").value), 0.3
+            ),
+            "force_forward_after_escape_s": max(
+                float(self.get_parameter("force_forward_after_escape_s").value), 0.3
+            ),
+            "corner_lock_timeout_s": max(
+                float(self.get_parameter("corner_lock_timeout_s").value), 1.0
+            ),
+            "turn_flip_limit": int(self.get_parameter("turn_flip_limit").value),
+            "turn_flip_window_s": max(
+                float(self.get_parameter("turn_flip_window_s").value), 1.0
+            ),
+            "side_margin": float(self.get_parameter("side_free_margin_m").value),
             "force_forward_time_s": max(
                 float(self.get_parameter("force_forward_time_s").value), 0.3
             ),
@@ -490,17 +595,12 @@ class SimpleDepthAvoidanceNode(Node):
                 twist.linear.x = p["v_rev"]
         elif state == _State.WALL_ESCAPE:
             if twist.linear.x < 0.0:
-                if twist.linear.x > p["v_rev"] * 0.5:
-                    twist.linear.x = p["v_rev"]
+                twist.linear.x = p["v_rev"]
             elif twist.linear.x > 0.0:
                 if twist.linear.x < p["v_fwd"]:
                     twist.linear.x = p["v_fwd"]
-            wz = twist.angular.z
-            if abs(wz) > 1e-6 and abs(wz) < p["min_wz"]:
-                sign = 1.0 if wz >= 0.0 else -1.0
-                twist.angular.z = sign * max(p["min_wz"], p["w_turn"])
-            elif abs(wz) > 1e-6 and abs(wz) < p["w_turn"]:
-                sign = 1.0 if wz >= 0.0 else -1.0
+            if abs(twist.angular.z) > 1e-6:
+                sign = 1.0 if twist.angular.z >= 0.0 else -1.0
                 twist.angular.z = sign * p["w_turn"]
         elif state in (
             _State.TURN_LEFT,
