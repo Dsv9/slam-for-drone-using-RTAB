@@ -4,7 +4,7 @@ chemical_mapper_node:
     odom_topic: /odom
     gas_topic: /gas/concentration
     map_topic: /gas/chemical_map
-    map_frame: map
+    map_frame: odom
     resolution: 0.2
     width: 200
     height: 200
@@ -14,3 +14,6 @@ chemical_mapper_node:
     splat_radius_m: 0.8
     ema_alpha: 0.3
     gas_max: 2.0
+    gas_pose_fallback_mode: true
+    fallback_x: 0.0
+    fallback_y: 0.0

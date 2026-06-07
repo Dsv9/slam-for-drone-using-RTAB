@@ -80,6 +80,17 @@ def generate_launch_description():
             DeclareLaunchArgument("avoidance_publish_hz", default_value="10.0"),
             DeclareLaunchArgument("debug_avoidance", default_value="true"),
             DeclareLaunchArgument("debug_avoidance_period_sec", default_value="1.0"),
+            # --- Gas simulation (always on by default; pose fallback if /odom invalid) ---
+            DeclareLaunchArgument("enable_gas", default_value="true"),
+            DeclareLaunchArgument("debug_gas", default_value="true"),
+            DeclareLaunchArgument("gas_source_x", default_value="2.0"),
+            DeclareLaunchArgument("gas_source_y", default_value="2.0"),
+            DeclareLaunchArgument("gas_sigma", default_value="1.5"),
+            DeclareLaunchArgument("gas_amplitude", default_value="1.0"),
+            DeclareLaunchArgument("gas_publish_rate_hz", default_value="5.0"),
+            DeclareLaunchArgument("gas_pose_fallback_mode", default_value="true"),
+            DeclareLaunchArgument("fallback_x", default_value="0.0"),
+            DeclareLaunchArgument("fallback_y", default_value="0.0"),
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(
                     os.path.join(
@@ -139,9 +150,24 @@ def generate_launch_description():
                 executable="gas_sensor_sim_node",
                 name="gas_sensor_sim_node",
                 output="screen",
+                condition=IfCondition(LaunchConfiguration("enable_gas")),
                 parameters=[
                     os.path.join(pkg_core, "config", "gas_sensor_sim.yaml"),
-                    {"use_sim_time": True},
+                    {
+                        "enable_gas": LaunchConfiguration("enable_gas"),
+                        "debug_gas": LaunchConfiguration("debug_gas"),
+                        "gas_source_x": LaunchConfiguration("gas_source_x"),
+                        "gas_source_y": LaunchConfiguration("gas_source_y"),
+                        "gas_sigma": LaunchConfiguration("gas_sigma"),
+                        "gas_amplitude": LaunchConfiguration("gas_amplitude"),
+                        "gas_publish_rate_hz": LaunchConfiguration("gas_publish_rate_hz"),
+                        "gas_pose_fallback_mode": LaunchConfiguration(
+                            "gas_pose_fallback_mode"
+                        ),
+                        "fallback_x": LaunchConfiguration("fallback_x"),
+                        "fallback_y": LaunchConfiguration("fallback_y"),
+                        "use_sim_time": True,
+                    },
                 ],
             ),
             Node(
@@ -149,9 +175,17 @@ def generate_launch_description():
                 executable="chemical_mapper_node",
                 name="chemical_mapper_node",
                 output="screen",
+                condition=IfCondition(LaunchConfiguration("enable_gas")),
                 parameters=[
                     os.path.join(pkg_core, "config", "chemical_mapper.yaml"),
-                    {"use_sim_time": True},
+                    {
+                        "gas_pose_fallback_mode": LaunchConfiguration(
+                            "gas_pose_fallback_mode"
+                        ),
+                        "fallback_x": LaunchConfiguration("fallback_x"),
+                        "fallback_y": LaunchConfiguration("fallback_y"),
+                        "use_sim_time": True,
+                    },
                 ],
             ),
             Node(
