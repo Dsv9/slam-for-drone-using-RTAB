@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SLAM Drone — Environmental & Chemical Risk Detection</title>
+<style>
+  :root {
+    --bg: #0a0e14;
+    --panel: #111824;
+    --ink: #e6edf3;
+    --muted: #7d8da1;
+    --line: #1e2a3a;
+    --depth-near: #c43b5a;   /* warm = near, from RTAB depth coloring */
+    --depth-far: #2d6cdf;    /* cool = far */
+    --gas: #2f5bff;          /* gas-map blue */
+    --accent: #4fd1c5;       /* RViz axis teal */
+    --mono: 'SF Mono', 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+    --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 28px; }
+
+  /* ---------- Hero ---------- */
+  .hero {
+    min-height: 92vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+    background:
+      radial-gradient(ellipse 80% 60% at 70% 30%, rgba(45,108,223,0.18), transparent 70%),
+      radial-gradient(ellipse 60% 50% at 20% 80%, rgba(196,59,90,0.12), transparent 70%),
+      var(--bg);
+    border-bottom: 1px solid var(--line);
+    overflow: hidden;
+  }
+
+  /* depth-grid floor reference */
+  .hero::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 48px 48px;
+    -webkit-mask-image: linear-gradient(to bottom, transparent 55%, rgba(0,0,0,0.5) 100%);
+    mask-image: linear-gradient(to bottom, transparent 55%, rgba(0,0,0,0.5) 100%);
+    opacity: 0.4;
+    pointer-events: none;
+  }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 26px;
+    position: relative;
+    z-index: 1;
+    opacity: 0;
+    animation: rise 0.7s 0.1s forwards;
+  }
+
+  h1 {
+    font-size: clamp(2.4rem, 6vw, 4.4rem);
+    line-height: 1.04;
+    font-weight: 680;
+    letter-spacing: -0.02em;
+    max-width: 16ch;
+    position: relative;
+    z-index: 1;
+    opacity: 0;
+    animation: rise 0.7s 0.22s forwards;
+  }
+
+  h1 .grad {
+    background: linear-gradient(100deg, var(--depth-far), var(--accent));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .lede {
+    margin-top: 26px;
+    font-size: clamp(1.02rem, 2vw, 1.22rem);
+    color: var(--muted);
+    max-width: 56ch;
+    position: relative;
+    z-index: 1;
+    opacity: 0;
+    animation: rise 0.7s 0.34s forwards;
+  }
+
+  .hero-cta {
+    margin-top: 40px;
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    position: relative;
+    z-index: 1;
+    opacity: 0;
+    animation: rise 0.7s 0.46s forwards;
+  }
+
+  .btn {
+    font-family: var(--mono);
+    font-size: 0.86rem;
+    letter-spacing: 0.04em;
+    padding: 13px 22px;
+    border-radius: 7px;
+    text-decoration: none;
+    transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+  }
+  .btn-primary { background: var(--depth-far); color: #fff; }
+  .btn-primary:hover { background: #3f7df0; transform: translateY(-2px); }
+  .btn-ghost { border: 1px solid var(--line); color: var(--ink); }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); transform: translateY(-2px); }
+
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(18px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ---------- Section scaffolding ---------- */
+  section { padding: 92px 0; border-bottom: 1px solid var(--line); }
+  .sec-label {
+    font-family: var(--mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 16px;
+  }
+  h2 {
+    font-size: clamp(1.7rem, 4vw, 2.5rem);
+    font-weight: 640;
+    letter-spacing: -0.015em;
+    margin-bottom: 22px;
+    max-width: 20ch;
+  }
+  .sec-intro { color: var(--muted); max-width: 64ch; font-size: 1.05rem; }
+
+  /* ---------- Pipeline ---------- */
+  .pipeline {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-top: 48px;
+  }
+  .stage {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 22px 18px;
+    position: relative;
+    transition: border-color 0.2s ease, transform 0.2s ease;
+  }
+  .stage:hover { border-color: var(--depth-far); transform: translateY(-3px); }
+  .stage .n {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+  }
+  .stage h3 { font-size: 1.04rem; margin: 12px 0 7px; font-weight: 600; }
+  .stage p { font-size: 0.86rem; color: var(--muted); line-height: 1.5; }
+
+  /* ---------- Features ---------- */
+  .feat-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 18px;
+    margin-top: 48px;
+  }
+  .feat {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 26px;
+    border-left: 2px solid var(--depth-far);
+  }
+  .feat h3 { font-size: 1.08rem; margin-bottom: 8px; font-weight: 600; }
+  .feat p { color: var(--muted); font-size: 0.92rem; }
+
+  /* ---------- Gallery ---------- */
+  .gallery { margin-top: 48px; display: grid; gap: 18px; }
+  .gal-row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  figure {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  figure img { width: 100%; display: block; aspect-ratio: 16/10; object-fit: cover; }
+  figcaption {
+    font-family: var(--mono);
+    font-size: 0.76rem;
+    color: var(--muted);
+    padding: 12px 16px;
+    border-top: 1px solid var(--line);
+    letter-spacing: 0.03em;
+  }
+  .gal-full img { aspect-ratio: 21/9; }
+
+  /* ---------- Specs ---------- */
+  .specs { margin-top: 40px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .spec { background: var(--bg); padding: 24px 20px; }
+  .spec .v { font-family: var(--mono); font-size: 1.5rem; color: var(--ink); font-weight: 500; }
+  .spec .k { font-size: 0.82rem; color: var(--muted); margin-top: 6px; }
+
+  /* ---------- Stack ---------- */
+  .stack { display: flex; flex-wrap: wrap; gap: 11px; margin-top: 40px; }
+  .chip {
+    font-family: var(--mono);
+    font-size: 0.84rem;
+    padding: 9px 16px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 50px;
+    color: var(--ink);
+  }
+  .chip span { color: var(--accent); }
+
+  /* ---------- Team ---------- */
+  .team { margin-top: 40px; display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; }
+  .member { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 20px; }
+  .member .name { font-weight: 600; font-size: 0.98rem; }
+  .member .role { font-family: var(--mono); font-size: 0.74rem; color: var(--muted); margin-top: 5px; letter-spacing: 0.04em; }
+  .supervisor { margin-top: 22px; font-size: 0.95rem; color: var(--muted); }
+  .supervisor strong { color: var(--ink); font-weight: 600; }
+
+  /* ---------- Footer ---------- */
+  footer { padding: 60px 0; text-align: center; }
+  footer .partner { color: var(--muted); font-size: 0.95rem; margin-bottom: 24px; }
+  footer .partner strong { color: var(--ink); }
+  footer .copy { font-family: var(--mono); font-size: 0.76rem; color: var(--muted); margin-top: 30px; letter-spacing: 0.04em; }
+
+  /* ---------- Reveal on scroll ---------- */
+  .reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.6s ease, transform 0.6s ease; }
+  .reveal.in { opacity: 1; transform: translateY(0); }
+
+  @media (max-width: 760px) {
+    .pipeline { grid-template-columns: 1fr 1fr; }
+    .feat-grid { grid-template-columns: 1fr; }
+    .gal-row { grid-template-columns: 1fr; }
+    .specs { grid-template-columns: 1fr; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+    .reveal { opacity: 1; transform: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow">Senior Design Project · P2526-04</div>
+    <h1>Autonomous drones that <span class="grad">map space and sense chemical risk</span></h1>
+    <p class="lede">A fully simulated indoor UAV that builds a 3D map of unknown environments using RGB-D SLAM, avoids obstacles on its own, and detects gas hazards in real time — all in one ROS 2 pipeline.</p>
+    <div class="hero-cta">
+      <a class="btn btn-primary" href="https://github.com/Dsv9/slam-for-drone-using-RTAB">View on GitHub →</a>
+      <a class="btn btn-ghost" href="#system">How it works</a>
+    </div>
+  </div>
+</header>
+
+<section id="system">
+  <div class="wrap">
+    <div class="sec-label reveal">The Pipeline</div>
+    <h2 class="reveal">Four subsystems, one launch command</h2>
+    <p class="sec-intro reveal">The drone perceives, maps, navigates, and senses simultaneously. Each block runs as an independent ROS 2 component, bridged together into a single integrated system.</p>
+    <div class="pipeline">
+      <div class="stage reveal"><div class="n">01 · SIMULATE</div><h3>Gazebo Harmonic</h3><p>A custom UAV with an RGB-D camera flies through an indoor world full of obstacles.</p></div>
+      <div class="stage reveal"><div class="n">02 · MAP</div><h3>RTAB-Map SLAM</h3><p>RGB-D visual odometry and pose graph optimization build a consistent 3D map with loop closure.</p></div>
+      <div class="stage reveal"><div class="n">03 · NAVIGATE</div><h3>Avoidance FSM</h3><p>A finite-state controller reads depth data and steers the drone clear of obstacles.</p></div>
+      <div class="stage reveal"><div class="n">04 · SENSE</div><h3>Gas Mapping</h3><p>A simulated sensor models gas dispersion and paints a live chemical map of the space.</p></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-label reveal">Capabilities</div>
+    <h2 class="reveal">What the system does</h2>
+    <div class="feat-grid">
+      <div class="feat reveal"><h3>RGB-D Visual SLAM</h3><p>Real-time 3D mapping and loop closure with RTAB-Map, producing globally consistent maps from a single depth camera.</p></div>
+      <div class="feat reveal"><h3>Autonomous Avoidance</h3><p>A depth-guided finite-state machine handles forward motion, turning, reversing, and corner-escape behavior without a pre-built map.</p></div>
+      <div class="feat reveal"><h3>Chemical Risk Detection</h3><p>A Gaussian dispersion model drives a simulated gas sensor, and a chemical mapper overlays concentration onto the environment.</p></div>
+      <div class="feat reveal"><h3>Integrated Visualization</h3><p>RViz shows RGB, depth, point cloud, trajectory, the live map, and the gas overlay together in one view.</p></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-label reveal">In Action</div>
+    <h2 class="reveal">From simulation to map</h2>
+    <div class="gallery">
+      <div class="gal-row">
+        <figure class="reveal"><img src="../assets/gazebo_outside_view.png" alt="Gazebo environment outside view"><figcaption>// simulated indoor world — overview</figcaption></figure>
+        <figure class="reveal"><img src="../assets/gazebo_inside_view.png" alt="Gazebo environment inside view"><figcaption>// drone's-eye view of obstacles</figcaption></figure>
+      </div>
+      <figure class="gal-full reveal"><img src="../assets/rtab-map_3d_meshlab_view.png" alt="RTAB-Map 3D reconstruction"><figcaption>// RTAB-Map 3D reconstruction with loop closure</figcaption></figure>
+      <div class="gal-row">
+        <figure class="reveal"><img src="../assets/trajectory_only.png" alt="Drone trajectory pose graph"><figcaption>// optimized pose graph trajectory</figcaption></figure>
+        <figure class="reveal"><img src="../assets/rviz_with_gas_map.png" alt="RViz gas concentration map"><figcaption>// live gas concentration map in RViz</figcaption></figure>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-label reveal">Platform</div>
+    <h2 class="reveal">The simulated UAV</h2>
+    <p class="sec-intro reveal">A custom research drone model — not based on any commercial aircraft — sized and sensed for SLAM and gas-mapping experiments.</p>
+    <div class="specs">
+      <div class="spec reveal"><div class="v">640×480</div><div class="k">RGB-D resolution @ 60° FOV</div></div>
+      <div class="spec reveal"><div class="v">0.1–10 m</div><div class="k">Depth sensing range</div></div>
+      <div class="spec reveal"><div class="v">10 Hz</div><div class="k">Camera update rate</div></div>
+      <div class="spec reveal"><div class="v">1.2 kg</div><div class="k">Mass</div></div>
+      <div class="spec reveal"><div class="v">0.72 m</div><div class="k">Body length</div></div>
+      <div class="spec reveal"><div class="v">3-DoF</div><div class="k">Velocity-controlled motion</div></div>
+    </div>
+    <div class="stack">
+      <div class="chip"><span>›</span> ROS 2 Jazzy</div>
+      <div class="chip"><span>›</span> Gazebo Harmonic</div>
+      <div class="chip"><span>›</span> RTAB-Map</div>
+      <div class="chip"><span>›</span> RViz</div>
+      <div class="chip"><span>›</span> Python 3</div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-label reveal">The Team</div>
+    <h2 class="reveal">Built at Istanbul Bilgi University</h2>
+    <div class="team">
+      <div class="member reveal"><div class="name">Basil Mohammad A. Sadlah</div><div class="role">INDUSTRIAL ENGINEERING</div></div>
+      <div class="member reveal"><div class="name">Mehmet Ayberk Pişkin</div><div class="role">INDUSTRIAL ENGINEERING</div></div>
+      <div class="member reveal"><div class="name">Saleh Rami Yaish</div><div class="role">INDUSTRIAL ENGINEERING</div></div>
+      <div class="member reveal"><div class="name">Omar Zuhair Arafat</div><div class="role">INDUSTRIAL ENGINEERING</div></div>
+      <div class="member reveal"><div class="name">Mohammad S. M. Al-Hamami</div><div class="role">INDUSTRIAL ENGINEERING</div></div>
+    </div>
+    <p class="supervisor reveal">Supervised by <strong>Asst. Prof. Dr. Banu Kabakulak</strong></p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p class="partner">Industry partner — <strong>Kayalar Kimya</strong> (Genç brand)</p>
+    <a class="btn btn-primary" href="https://github.com/Dsv9/slam-for-drone-using-RTAB">Explore the repository →</a>
+    <p class="copy">SLAM-Based Autonomous Drone System · 2026</p>
+  </div>
+</footer>
+
+<script>
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((e, i) => {
+      if (e.isIntersecting) {
+        setTimeout(() => e.target.classList.add('in'), (i % 4) * 80);
+        io.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.12 });
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+</script>
+
+</body>
+</html>
