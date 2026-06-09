@@ -31,6 +31,7 @@ setup(
             "cmd_vel_watchdog_node = drone_gas_core.cmd_vel_watchdog_node:main",
             "visual_odometry_smoke_motion = drone_gas_core.visual_odometry_smoke_motion:main",
             "simple_depth_avoidance_node = drone_gas_core.simple_depth_avoidance_node:main",
+            "odom_tf_broadcaster_node = drone_gas_core.odom_tf_broadcaster_node:main",
         ],
     },
 )

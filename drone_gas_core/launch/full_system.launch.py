@@ -3,7 +3,7 @@ from launch.actions import DeclareLaunchArgument, GroupAction, IncludeLaunchDesc
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PythonExpression
-from launch_ros.actions import Node, SetParameter
+from launch_ros.actions import Node
 from ament_index_python.packages import get_package_share_directory
 import os
 
@@ -46,9 +46,6 @@ def generate_launch_description():
 
     return LaunchDescription(
         [
-            # All Gazebo/RViz/TF nodes must share /clock sim time or RViz cannot transform
-            # PointCloud2 stamps to odom (tf2_echo may still work using "latest" transform).
-            SetParameter(name="use_sim_time", value=True),
             # Frame chain: odom -> base_link -> rgbd_camera (+ Gazebo alias frame).
             DeclareLaunchArgument("start_bridge", default_value="true"),
             DeclareLaunchArgument("gazebo_twist_topic", default_value="/cmd_vel"),
@@ -103,6 +100,13 @@ def generate_launch_description():
             ),
             rtabmap_delayed,
             Node(
+                package="drone_gas_core",
+                executable="odom_tf_broadcaster_node",
+                name="odom_tf_broadcaster_node",
+                output="screen",
+                parameters=[{"odom_topic": "/odom", "use_sim_time": True}],
+            ),
+            Node(
                 package="rviz2",
                 executable="rviz2",
                 name="rviz2",
@@ -138,7 +142,6 @@ def generate_launch_description():
                     "--child-frame-id",
                     "rgbd_camera",
                 ],
-                parameters=[{"use_sim_time": True}],
             ),
             Node(
                 package="tf2_ros",
@@ -163,7 +166,6 @@ def generate_launch_description():
                     "--child-frame-id",
                     "simple_drone/base_link/rgbd_camera",
                 ],
-                parameters=[{"use_sim_time": True}],
             ),
             Node(
                 package="drone_gas_core",

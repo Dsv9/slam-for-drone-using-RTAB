@@ -93,7 +93,7 @@ def generate_launch_description():
                     "approx_sync_max_interval": "0.10",
                     "wait_for_transform": "0.30",
                     "depth_scale": "1.0",
-                    "publish_tf_odom": "true",
+                    "publish_tf_odom": "false",
                     "publish_tf_map": "true",
                     "qos": "2",
                     "qos_image": "2",
