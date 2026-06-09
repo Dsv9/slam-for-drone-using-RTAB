@@ -1,5 +1,5 @@
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, GroupAction, IncludeLaunchDescription, TimerAction
+from launch.actions import DeclareLaunchArgument, GroupAction, IncludeLaunchDescription, SetParameter, TimerAction
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PythonExpression
@@ -46,6 +46,9 @@ def generate_launch_description():
 
     return LaunchDescription(
         [
+            # All Gazebo/RViz/TF nodes must share /clock sim time or RViz cannot transform
+            # PointCloud2 stamps to odom (tf2_echo may still work using "latest" transform).
+            SetParameter(name="use_sim_time", value=True),
             # Frame chain: odom -> base_link -> rgbd_camera (+ Gazebo alias frame).
             DeclareLaunchArgument("start_bridge", default_value="true"),
             DeclareLaunchArgument("gazebo_twist_topic", default_value="/cmd_vel"),
@@ -143,13 +146,21 @@ def generate_launch_description():
                 name="rgbd_camera_gazebo_frame_alias_tf",
                 output="screen",
                 arguments=[
+                    "--x",
                     "0",
+                    "--y",
                     "0",
+                    "--z",
                     "0",
+                    "--roll",
                     "0",
+                    "--pitch",
                     "0",
+                    "--yaw",
                     "0",
+                    "--frame-id",
                     "rgbd_camera",
+                    "--child-frame-id",
                     "simple_drone/base_link/rgbd_camera",
                 ],
                 parameters=[{"use_sim_time": True}],

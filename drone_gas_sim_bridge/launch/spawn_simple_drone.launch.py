@@ -49,6 +49,7 @@ def generate_launch_description():
         executable="parameter_bridge",
         output="screen",
         arguments=["--ros-args", "-p", f"config_file:={bridge_config}"],
+        parameters=[{"use_sim_time": True}],
     )
 
     return LaunchDescription([gazebo, spawn_drone, bridge])

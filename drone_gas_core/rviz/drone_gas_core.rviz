@@ -14,6 +14,7 @@ Visualization Manager:
       Enabled: true
       Show Axes: true
       Show Arrows: false
+      Frame Timeout: 30
       Name: TF
     - Class: rviz_default_plugins/Image
       Enabled: true
