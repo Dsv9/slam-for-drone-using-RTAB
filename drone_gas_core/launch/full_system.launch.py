@@ -104,7 +104,17 @@ def generate_launch_description():
                 executable="odom_tf_broadcaster_node",
                 name="odom_tf_broadcaster_node",
                 output="screen",
-                parameters=[{"odom_topic": "/odom", "use_sim_time": True}],
+                condition=IfCondition(enable_rtabmap),
+                parameters=[
+                    {
+                        "odom_topic": "/odom",
+                        "odom_frame_id": "odom",
+                        "base_frame_id": "base_link",
+                        "publish_hz": 30.0,
+                        "debug_tf": debug_odom,
+                        "use_sim_time": True,
+                    }
+                ],
             ),
             Node(
                 package="rviz2",
