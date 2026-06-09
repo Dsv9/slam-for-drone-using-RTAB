@@ -1,0 +1,23 @@
+# ─────────────────────────────────────────────
+# ROS 2 Jazzy (install via official ROS 2 repos)
+# https://docs.ros.org/en/jazzy/Installation.html
+# ─────────────────────────────────────────────
+# ros-jazzy-desktop
+# ros-jazzy-rtabmap-ros
+# ros-jazzy-nav-msgs
+# ros-jazzy-sensor-msgs
+# ros-jazzy-geometry-msgs
+# ros-jazzy-tf2-ros
+# ros-jazzy-launch
+# ros-jazzy-launch-ros
+
+# ─────────────────────────────────────────────
+# Gazebo Harmonic (install via official Gazebo repos)
+# https://gazebosim.org/docs/harmonic/install
+# ─────────────────────────────────────────────
+# gz-harmonic
+
+# ─────────────────────────────────────────────
+# Python dependencies (pip install)
+# ─────────────────────────────────────────────
+numpy
