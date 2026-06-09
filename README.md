@@ -10,6 +10,10 @@ This project implements a fully simulated autonomous drone system capable of nav
 
 The system integrates multiple robotics subsystems — simulation, perception, mapping, navigation, and chemical sensing — into a single launchable pipeline using ROS 2 and Gazebo.
 
+| Gazebo Environment (Outside) | Gazebo Environment (Inside) |
+|:---:|:---:|
+| ![Gazebo Outside View](assets/gazebo_outside_view.png) | ![Gazebo Inside View](assets/gazebo_inside_view.png) |
+
 ---
 
 ## Key Features
@@ -198,6 +202,18 @@ Where:
 - `σ` — spatial spread parameter
 
 The sensor publishes on `/gas/concentration` at ~5 Hz. The chemical map is built by `chemical_mapper_node` and published on `/gas/chemical_map`, visualized in RViz using the `costmap` color scheme.
+
+---
+
+## Visualization
+
+| RTAB-Map 3D Point Cloud | Drone Trajectory (Pose Graph) |
+|:---:|:---:|
+| ![RTAB-Map 3D MeshLab View](assets/rtab-map_3d_meshlab_view.png) | ![Trajectory Only](assets/trajectory_only.png) |
+
+| RViz — Gas Concentration Map |
+|:---:|
+| ![RViz with Gas Map](assets/rviz_with_gas_map.png) |
 
 ---
 
