@@ -98,13 +98,12 @@ def generate_launch_description():
                     )
                 )
             ),
-            rtabmap_delayed,
+            # Connect odom -> base_link immediately (identity until VO /odom is valid).
             Node(
                 package="drone_gas_core",
                 executable="odom_tf_broadcaster_node",
                 name="odom_tf_broadcaster_node",
                 output="screen",
-                condition=IfCondition(enable_rtabmap),
                 parameters=[
                     {
                         "odom_topic": "/odom",
@@ -116,6 +115,7 @@ def generate_launch_description():
                     }
                 ],
             ),
+            rtabmap_delayed,
             Node(
                 package="rviz2",
                 executable="rviz2",

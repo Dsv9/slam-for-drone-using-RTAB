@@ -1,20 +1,26 @@
-"""Broadcast odom -> base_link on /tf from /odom.
+"""Always broadcast odom -> base_link on /tf.
 
-Republishes at publish_hz with current sim clock stamp so RViz can transform
-PointCloud2 (rgbd_camera) into Fixed Frame odom. Message-stamp-only TF often fails
-when sensor stamps and VO stamps differ slightly.
+Publishes identity at startup so TF trees stay connected before VO is ready.
+Updates from /odom when valid messages arrive.
 """
 from __future__ import annotations
 
 import math
 import time
-from typing import Optional
 
 import rclpy
 from geometry_msgs.msg import TransformStamped
 from nav_msgs.msg import Odometry
 from rclpy.node import Node
 import tf2_ros
+
+
+def _identity_transform(odom_frame: str, base_frame: str) -> TransformStamped:
+    t = TransformStamped()
+    t.header.frame_id = odom_frame
+    t.child_frame_id = base_frame
+    t.transform.rotation.w = 1.0
+    return t
 
 
 def _valid_odom(msg: Odometry) -> bool:
@@ -44,48 +50,48 @@ class OdomTfBroadcasterNode(Node):
         self._odom_frame = str(self.get_parameter("odom_frame_id").value)
         self._base_frame = str(self.get_parameter("base_frame_id").value)
         self._br = tf2_ros.TransformBroadcaster(self)
-        self._latest: Optional[TransformStamped] = None
+        self._pose = _identity_transform(self._odom_frame, self._base_frame)
+        self._have_vo = False
         self._dbg_last = 0.0
 
         topic = str(self.get_parameter("odom_topic").value)
         self.create_subscription(Odometry, topic, self._odom_cb, 50)
-        hz = max(float(self.get_parameter("publish_hz").value), 5.0)
+        hz = max(float(self.get_parameter("publish_hz").value), 10.0)
         self.create_timer(1.0 / hz, self._publish_tf)
+        self.get_logger().info(
+            "Publishing %s -> %s TF continuously (identity until valid /odom)"
+            % (self._odom_frame, self._base_frame)
+        )
 
     def _odom_cb(self, msg: Odometry) -> None:
         if not _valid_odom(msg):
             return
-        t = TransformStamped()
-        t.header.frame_id = self._odom_frame
-        t.child_frame_id = self._base_frame
-        t.transform.translation.x = float(msg.pose.pose.position.x)
-        t.transform.translation.y = float(msg.pose.pose.position.y)
-        t.transform.translation.z = float(msg.pose.pose.position.z)
-        t.transform.rotation = msg.pose.pose.orientation
-        self._latest = t
+        self._pose.transform.translation.x = float(msg.pose.pose.position.x)
+        self._pose.transform.translation.y = float(msg.pose.pose.position.y)
+        self._pose.transform.translation.z = float(msg.pose.pose.position.z)
+        self._pose.transform.rotation = msg.pose.pose.orientation
+        self._have_vo = True
 
     def _publish_tf(self) -> None:
-        if self._latest is None:
-            now = time.monotonic()
-            if bool(self.get_parameter("debug_tf").value) and (now - self._dbg_last) >= 2.0:
-                self._dbg_last = now
-                self.get_logger().warn("Waiting for valid /odom before publishing odom->base_link TF")
-            return
         t = TransformStamped()
         t.header.stamp = self.get_clock().now().to_msg()
         t.header.frame_id = self._odom_frame
         t.child_frame_id = self._base_frame
-        t.transform = self._latest.transform
+        t.transform = self._pose.transform
         self._br.sendTransform(t)
 
+        if not bool(self.get_parameter("debug_tf").value):
+            return
         now = time.monotonic()
-        if bool(self.get_parameter("debug_tf").value) and (now - self._dbg_last) >= 5.0:
-            self._dbg_last = now
-            tr = t.transform.translation
-            self.get_logger().info(
-                "[tf] publishing %s -> %s x=%.3f y=%.3f z=%.3f"
-                % (self._odom_frame, self._base_frame, tr.x, tr.y, tr.z)
-            )
+        if (now - self._dbg_last) < 5.0:
+            return
+        self._dbg_last = now
+        tr = t.transform.translation
+        src = "vo" if self._have_vo else "identity"
+        self.get_logger().info(
+            "[tf] %s -> %s source=%s x=%.3f y=%.3f z=%.3f"
+            % (self._odom_frame, self._base_frame, src, tr.x, tr.y, tr.z)
+        )
 
 
 def main() -> None:
