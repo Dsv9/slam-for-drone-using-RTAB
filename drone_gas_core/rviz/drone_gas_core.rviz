@@ -91,8 +91,8 @@ Visualization Manager:
         Value: /gas/chemical_map
   Global Options:
     Background Color: 40; 40; 46
-    # base_link keeps RGB/depth/cloud valid before /odom exists; switch Fixed Frame to odom when VO is healthy.
-    Fixed Frame: base_link
+    # Requires odom -> base_link (rgbd_odometry) + base_link -> rgbd_camera (static TF in launch).
+    Fixed Frame: odom
     Frame Rate: 30
 Tools:
   - Class: rviz_default_plugins/MoveCamera
