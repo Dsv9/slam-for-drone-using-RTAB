@@ -40,12 +40,17 @@ def generate_launch_description():
     pkg = get_package_share_directory("drone_gas_core")
     rtab = get_package_share_directory("rtabmap_launch")
     debug_odom = LaunchConfiguration("debug_odom")
+    use_gazebo_odom = LaunchConfiguration("use_gazebo_odom")
     odom_log_level = PythonExpression(
         ["'debug' if '", debug_odom, "' == 'true' else 'info'"]
+    )
+    visual_odometry = PythonExpression(
+        ["'false' if '", use_gazebo_odom, "' == 'true' else 'true'"]
     )
     return LaunchDescription(
         [
             DeclareLaunchArgument("use_sim_time", default_value="true"),
+            DeclareLaunchArgument("use_gazebo_odom", default_value="true"),
             DeclareLaunchArgument("rgb_topic", default_value="/rgbd_camera/image"),
             DeclareLaunchArgument("depth_topic", default_value="/rgbd_camera/depth_image"),
             DeclareLaunchArgument(
@@ -79,7 +84,7 @@ def generate_launch_description():
                     "camera_info_topic": LaunchConfiguration("camera_info_topic"),
                     "odom_topic": LaunchConfiguration("odom_topic"),
                     "vo_frame_id": LaunchConfiguration("vo_frame_id"),
-                    "visual_odometry": "true",
+                    "visual_odometry": visual_odometry,
                     "icp_odometry": "false",
                     "depth": "true",
                     "subscribe_rgb": "true",

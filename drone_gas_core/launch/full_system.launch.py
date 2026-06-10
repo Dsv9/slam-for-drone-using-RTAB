@@ -18,6 +18,7 @@ def generate_launch_description():
     enable_rtabmap = LaunchConfiguration("enable_rtabmap")
     enable_rviz = LaunchConfiguration("enable_rviz")
     debug_odom = LaunchConfiguration("debug_odom")
+    use_gazebo_odom = LaunchConfiguration("use_gazebo_odom")
 
     rtabmap_delayed = GroupAction(
         condition=IfCondition(enable_rtabmap),
@@ -35,6 +36,7 @@ def generate_launch_description():
                             "depth_topic": "/rgbd_camera/depth_image",
                             "camera_info_topic": "/rgbd_camera/camera_info",
                             "odom_topic": "/odom",
+                            "use_gazebo_odom": use_gazebo_odom,
                             "debug_odom": debug_odom,
                             "enable_rtabmap_viz": "true",
                         }.items(),
@@ -97,6 +99,24 @@ def generate_launch_description():
                         pkg_sim_bridge, "launch", "spawn_simple_drone.launch.py"
                     )
                 )
+            ),
+            Node(
+                package="drone_gas_sim_bridge",
+                executable="gazebo_odom_publisher_node",
+                name="gazebo_odom_publisher_node",
+                output="screen",
+                condition=IfCondition(use_gazebo_odom),
+                parameters=[
+                    {
+                        "world_name": "default",
+                        "model_name": "simple_drone",
+                        "odom_topic": "/odom",
+                        "odom_frame_id": "odom",
+                        "child_frame_id": "base_link",
+                        "publish_hz": 30.0,
+                        "use_sim_time": True,
+                    }
+                ],
             ),
             # Connect odom -> base_link immediately (identity until VO /odom is valid).
             Node(

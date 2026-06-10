@@ -27,6 +27,7 @@ setup(
     entry_points={
         "console_scripts": [
             "gazebo_controller_bridge_node = drone_gas_sim_bridge.gazebo_controller_bridge_node:main",
+            "gazebo_odom_publisher_node = drone_gas_sim_bridge.gazebo_odom_publisher_node:main",
         ],
     },
 )
