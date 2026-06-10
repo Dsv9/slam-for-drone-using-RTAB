@@ -56,6 +56,7 @@ def generate_launch_description():
             DeclareLaunchArgument("enable_rtabmap", default_value="true"),
             DeclareLaunchArgument("enable_rviz", default_value="true"),
             DeclareLaunchArgument("debug_odom", default_value="true"),
+            DeclareLaunchArgument("use_gazebo_odom", default_value="true"),
             DeclareLaunchArgument("demo_avoidance_mode", default_value="true"),
             # --- DEMO avoidance (only when enable_avoidance:=true) ---
             DeclareLaunchArgument("safe_distance_m", default_value="0.45"),
