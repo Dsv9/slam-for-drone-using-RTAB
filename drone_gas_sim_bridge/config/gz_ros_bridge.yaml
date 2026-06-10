@@ -53,3 +53,10 @@
   direction: GZ_TO_ROS
   qos_profile: SENSOR_DATA
   frame_id: rgbd_camera
+
+# Ground-truth model pose for /odom (gazebo_odom_publisher_node).
+- ros_topic_name: /gazebo/simple_drone/pose
+  gz_topic_name: /model/simple_drone/pose
+  ros_type_name: geometry_msgs/msg/Pose
+  gz_type_name: gz.msgs.Pose
+  direction: GZ_TO_ROS

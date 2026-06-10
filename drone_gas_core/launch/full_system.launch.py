@@ -101,22 +101,25 @@ def generate_launch_description():
                     )
                 )
             ),
-            Node(
-                package="drone_gas_sim_bridge",
-                executable="gazebo_odom_publisher_node",
-                name="gazebo_odom_publisher_node",
-                output="screen",
-                condition=IfCondition(use_gazebo_odom),
-                parameters=[
-                    {
-                        "world_name": "default",
-                        "model_name": "simple_drone",
-                        "odom_topic": "/odom",
-                        "odom_frame_id": "odom",
-                        "child_frame_id": "base_link",
-                        "publish_hz": 30.0,
-                        "use_sim_time": True,
-                    }
+            TimerAction(
+                period=3.0,
+                actions=[
+                    Node(
+                        package="drone_gas_sim_bridge",
+                        executable="gazebo_odom_publisher_node",
+                        name="gazebo_odom_publisher_node",
+                        output="screen",
+                        condition=IfCondition(use_gazebo_odom),
+                        parameters=[
+                            {
+                                "pose_topic": "/gazebo/simple_drone/pose",
+                                "odom_topic": "/odom",
+                                "odom_frame_id": "odom",
+                                "child_frame_id": "base_link",
+                                "use_sim_time": True,
+                            }
+                        ],
+                    )
                 ],
             ),
             # Connect odom -> base_link immediately (identity until VO /odom is valid).

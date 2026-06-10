@@ -1,7 +1,7 @@
 """Publish /odom from Gazebo model pose (ground truth for sim demo).
 
+Reads bridged pose from Gazebo PosePublisher plugin (gz_ros_bridge.yaml).
 Visual odometry can stay at 0,0,0 while VelocityControl moves the model.
-This node reads the real Gazebo pose so gas mapping and TF track movement.
 """
 from __future__ import annotations
 
@@ -9,71 +9,57 @@ import math
 from typing import Optional, Tuple
 
 import rclpy
+from geometry_msgs.msg import Pose
 from nav_msgs.msg import Odometry
 from rclpy.node import Node
-from ros_gz_interfaces.srv import GetEntityState
+from rclpy.qos import QoSProfile, ReliabilityPolicy
 
 
 class GazeboOdomPublisherNode(Node):
     def __init__(self) -> None:
         super().__init__("gazebo_odom_publisher_node")
-        self.declare_parameter("world_name", "default")
-        self.declare_parameter("model_name", "simple_drone")
+        self.declare_parameter("pose_topic", "/gazebo/simple_drone/pose")
         self.declare_parameter("odom_topic", "/odom")
         self.declare_parameter("odom_frame_id", "odom")
         self.declare_parameter("child_frame_id", "base_link")
-        self.declare_parameter("publish_hz", 30.0)
-        self.declare_parameter("reference_frame", "world")
 
-        self._world = str(self.get_parameter("world_name").value)
-        self._model = str(self.get_parameter("model_name").value)
+        pose_topic = str(self.get_parameter("pose_topic").value)
+        odom_topic = str(self.get_parameter("odom_topic").value)
         self._odom_frame = str(self.get_parameter("odom_frame_id").value)
         self._child_frame = str(self.get_parameter("child_frame_id").value)
-        self._ref = str(self.get_parameter("reference_frame").value)
 
-        self._pub = self.create_publisher(
-            Odometry, str(self.get_parameter("odom_topic").value), 20
-        )
-        self._client = self.create_client(
-            GetEntityState, f"/world/{self._world}/get_entity_state"
-        )
+        qos = QoSProfile(depth=10, reliability=ReliabilityPolicy.BEST_EFFORT)
+        self._pub = self.create_publisher(Odometry, odom_topic, 10)
+        self._sub = self.create_subscription(Pose, pose_topic, self._on_pose, qos)
         self._prev: Optional[Tuple[float, float, float, float]] = None
         self._prev_t: Optional[float] = None
+        self._got_pose = False
         self._warned = False
 
-        hz = max(float(self.get_parameter("publish_hz").value), 5.0)
-        self.create_timer(1.0 / hz, self._tick)
+        self.create_timer(5.0, self._check_pose)
         self.get_logger().info(
-            "Gazebo ground-truth /odom from world=%s model=%s"
-            % (self._world, self._model)
+            "Publishing %s from Gazebo pose topic %s (frame=%s child=%s)"
+            % (odom_topic, pose_topic, self._odom_frame, self._child_frame)
         )
 
-    def _tick(self) -> None:
-        if not self._client.service_is_ready():
-            if not self._warned:
-                self._warned = True
-                self.get_logger().warn("Waiting for Gazebo get_entity_state service...")
+    def _check_pose(self) -> None:
+        if self._got_pose:
             return
-        self._warned = False
-        req = GetEntityState.Request()
-        req.name = self._model
-        req.reference_frame = self._ref
-        future = self._client.call_async(req)
-        future.add_done_callback(self._on_state)
+        if not self._warned:
+            self._warned = True
+            self.get_logger().warn(
+                "No pose on %s yet — check PosePublisher plugin and gz_ros_bridge.yaml"
+                % self.get_parameter("pose_topic").value
+            )
 
-    def _on_state(self, future) -> None:
-        try:
-            resp = future.result()
-        except Exception as exc:
-            self.get_logger().warn("get_entity_state failed: %s" % exc)
-            return
-        if resp is None or not resp.success:
-            return
+    def _on_pose(self, msg: Pose) -> None:
+        self._got_pose = True
+        self._warned = False
 
         now = self.get_clock().now()
         t_sec = now.nanoseconds * 1e-9
-        p = resp.state.pose.position
-        q = resp.state.pose.orientation
+        p = msg.position
+        q = msg.orientation
 
         odom = Odometry()
         odom.header.stamp = now.to_msg()
