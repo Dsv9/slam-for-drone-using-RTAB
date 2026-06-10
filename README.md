@@ -12,7 +12,7 @@ The system integrates multiple robotics subsystems — simulation, perception, m
 
 | Gazebo Environment (Outside) | Gazebo Environment (Inside) |
 |:---:|:---:|
-| ![Gazebo Outside View](assets/gazebo_outside_view.png) | ![Gazebo Inside View](assets/gazebo_inside_view.png) |
+| ![Gazebo Outside View](docs/assets/gazebo_outside_view.png) | ![Gazebo Inside View](docs/assets/gazebo_inside_view.png) |
 
 ---
 
@@ -209,11 +209,11 @@ The sensor publishes on `/gas/concentration` at ~5 Hz. The chemical map is built
 
 | RTAB-Map 3D Point Cloud | Drone Trajectory (Pose Graph) |
 |:---:|:---:|
-| ![RTAB-Map 3D MeshLab View](assets/rtab-map_3d_meshlab_view.png) | ![Trajectory Only](assets/trajectory_only.png) |
+| ![RTAB-Map 3D MeshLab View](docs/assets/rtab-map_3d_meshlab_view.png) | ![Trajectory Only](docs/assets/trajectory_only.png) |
 
 | RViz — Gas Concentration Map |
 |:---:|
-| ![RViz with Gas Map](assets/rviz_with_gas_map.png) |
+| ![RViz with Gas Map](docs/assets/rviz_with_gas_map.png) |
 
 ---
 
