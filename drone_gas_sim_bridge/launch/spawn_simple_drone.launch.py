@@ -11,7 +11,7 @@ def generate_launch_description():
     pkg_share = get_package_share_directory("drone_gas_sim_bridge")
     ros_gz_sim_share = get_package_share_directory("ros_gz_sim")
     model_path = os.path.join(pkg_share, "models", "simple_drone", "model.sdf")
-    world_path = os.path.join(pkg_share, "worlds", "empty_world.sdf")
+    world_path = os.path.join(pkg_share, "worlds", "updated_world.sdf")
 
     gazebo = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
